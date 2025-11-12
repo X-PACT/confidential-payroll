@@ -1,0 +1,28 @@
+{
+  "name": "confidential-payroll-v2",
+  "version": "2.0.0",
+  "description": "Confidential payroll system using Zama fhEVM + ERC-7984 + Verifiable Payslips",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:payslip": "hardhat test test/ConfidentialPayslip.test.js",
+    "coverage": "hardhat coverage",
+    "deploy:zama": "hardhat run scripts/deploy.js --network zama-sepolia",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "add-employees": "hardhat run scripts/addEmployees.js --network zama-sepolia",
+    "run-payroll": "hardhat run scripts/runPayroll.js --network zama-sepolia",
+    "request-payslip": "hardhat run scripts/requestPayslip.js --network zama-sepolia",
+    "demo:local": "hardhat run scripts/deploy.js --network localhost && hardhat run scripts/addEmployees.js --network localhost && hardhat run scripts/runPayroll.js --network localhost"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "fhevm": "^0.6.0",
+    "fhevmjs": "^0.6.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.5"
+  },
+  "license": "MIT"
+}
