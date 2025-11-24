@@ -354,24 +354,34 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      * @param grossPay Encrypted gross pay (euint64)
      * @return Encrypted total tax amount
      */
-    // BUG v1: this function decrypts inside the loop — WRONG!
-    // This exposes salary on-chain and breaks FHE confidentiality.
-    // TODO: fix using branchless TFHE arithmetic (see _calculateTaxV2)
     function _calculateTax(euint64 grossPay) internal view returns (euint64) {
-        euint64 totalTax = TFHE.asEuint64(0);
-        uint64 plainGross = TFHE.decrypt(grossPay); // <-- BUG: exposes plaintext!
+        euint64 totalTax          = TFHE.asEuint64(0);
+        euint64 previousThreshold = TFHE.asEuint64(0);
 
         for (uint i = 0; i < taxBrackets.length; i++) {
-            uint64 plainThreshold = TFHE.decrypt(taxBrackets[i].threshold); // <-- BUG
-            uint64 plainRate = TFHE.decrypt(taxBrackets[i].rate);
+            // Step 1: cap grossPay at this bracket's ceiling
+            euint64 cappedAtThreshold = TFHE.min(grossPay, taxBrackets[i].threshold);
 
-            if (plainGross > plainThreshold) {
-                uint64 bracketTax = (plainThreshold * plainRate) / 10000;
-                totalTax = TFHE.add(totalTax, TFHE.asEuint64(bracketTax));
-            }
+            // Step 2: taxable amount in this bracket = max(0, capped - prev)
+            ebool   abovePrev    = TFHE.gt(cappedAtThreshold, previousThreshold);
+            euint64 bracketAmt   = TFHE.select(
+                abovePrev,
+                TFHE.sub(cappedAtThreshold, previousThreshold),
+                TFHE.asEuint64(0)
+            );
+
+            // Step 3: tax for this bracket (basis points arithmetic)
+            euint64 bracketTax = TFHE.div(
+                TFHE.mul(bracketAmt, taxBrackets[i].rate),
+                TFHE.asEuint64(10000)
+            );
+
+            // Step 4: accumulate
+            totalTax          = TFHE.add(totalTax, bracketTax);
+            previousThreshold = taxBrackets[i].threshold;
         }
 
-        return totalTax;
+        return totalTax;  // Still encrypted — never revealed
     }
 
     // =========================================================================
