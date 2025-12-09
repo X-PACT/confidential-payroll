@@ -472,10 +472,9 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
 
         run.employeeCount = activeCount;
 
-        // BUG: forgot to allow run totals — auditPayrollRun will revert with ACL error
-        // TFHE.allow(run.totalGrossPay,   address(this));
-        // TFHE.allow(run.totalDeductions, address(this));
-        // TFHE.allow(run.totalNetPay,     address(this));
+        TFHE.allow(run.totalGrossPay,   address(this));
+        TFHE.allow(run.totalDeductions, address(this));
+        TFHE.allow(run.totalNetPay,     address(this));
 
         // Audit hash: links this run to a verifiable fingerprint without leaking amounts
         run.auditHash = keccak256(abi.encodePacked(
