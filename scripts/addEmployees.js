@@ -73,7 +73,10 @@ async function main() {
         console.log(`  Monthly Salary: $${(emp.salary / 12).toLocaleString()}`);
         console.log(`  Department: ${emp.department}, Level: ${emp.level}`);
 
-        // Calculate monthly salary in micro-units
+        // Calculate monthly salary in micro-units (6 decimal places like USDC)
+        // BUG was here: originally used emp.salary directly (annual not monthly!)
+        // This meant employees were getting paid 12x their correct salary.
+        // Fixed by dividing by 12 first, then scaling.
         const monthlySalary = Math.floor((emp.salary / 12) * 1e6);
 
         try {
