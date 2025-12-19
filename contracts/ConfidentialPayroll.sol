@@ -354,6 +354,10 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      * @param grossPay Encrypted gross pay (euint64)
      * @return Encrypted total tax amount
      */
+    // This took embarrassingly long to get right.
+    // The key insight is that in FHE you cannot branch — TFHE.select() evaluates BOTH paths.
+    // So you always iterate every bracket regardless of where the salary falls.
+    // Not intuitive if you come from normal programming.
     function _calculateTax(euint64 grossPay) internal view returns (euint64) {
         euint64 totalTax          = TFHE.asEuint64(0);
         euint64 previousThreshold = TFHE.asEuint64(0);
@@ -402,6 +406,9 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      *
      * @return runId The numeric ID of this payroll run
      */
+    // Note: we tried splitting this into a "prepare" + "execute" two-step to allow
+    // partial batches, but the intermediate ciphertext handles were expiring between
+    // calls in the Gateway. Simpler to do it all in one tx for now.
     function runPayroll()
         external
         onlyRole(PAYROLL_MANAGER_ROLE)
