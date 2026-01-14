@@ -73,10 +73,10 @@ async function main() {
         console.log(`  Monthly Salary: $${(emp.salary / 12).toLocaleString()}`);
         console.log(`  Department: ${emp.department}, Level: ${emp.level}`);
 
-        // Calculate monthly salary in micro-units (6 decimal places like USDC)
-        // BUG was here: originally used emp.salary directly (annual not monthly!)
-        // This meant employees were getting paid 12x their correct salary.
-        // Fixed by dividing by 12 first, then scaling.
+        // Calculate monthly salary in micro-units (6 decimal places, like USDC)
+        // BUG FIX: was previously using emp.salary * 1e6 directly which gave annual
+        // salary instead of monthly — caught this during first Sepolia test run when
+        // Alice's "salary" was 12x what it should have been. Divided by 12 first now.
         const monthlySalary = Math.floor((emp.salary / 12) * 1e6);
 
         try {
