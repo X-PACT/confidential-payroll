@@ -84,6 +84,9 @@ async function main() {
             // For this demo, we'll use TFHE.asEuint64 directly in contract
             // Note: This is simplified for demo. Real implementation uses einput + inputProof
             
+            // NOTE: addEmployee now takes gender as last param (added in v2 for equity oracle)
+            // was getting "wrong number of arguments" revert until I checked the ABI again —
+            // the contract signature changed but the script wasn't updated. Added 0 (undisclosed).
             const tx = await payroll.addEmployee(
                 emp.wallet,
                 monthlySalary, // In production, this would be encrypted einput
@@ -91,6 +94,7 @@ async function main() {
                 emp.personalData,
                 emp.department,
                 emp.level,
+                0, // gender: 0 = undisclosed (default for demo)
                 { gasLimit: 500000 }
             );
 
