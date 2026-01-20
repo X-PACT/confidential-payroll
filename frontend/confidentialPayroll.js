@@ -35,8 +35,11 @@ class ConfidentialPayrollClient {
         );
 
         // Initialize fhevmjs instance
+        // BUG FIX: chain ID was 8009 (wrong) — Zama Sepolia is actually 9000.
+        // Spent way too long debugging why fhevmjs was rejecting the network before
+        // checking the Zama docs again. Classic "read the docs" moment.
         this.fhevmInstance = await createInstance({
-            chainId: 8009, // Zama Sepolia
+            chainId: 9000, // Zama Sepolia (was incorrectly 8009 — fixed Feb 2026)
             network: window.ethereum,
             gatewayUrl: 'https://gateway.zama.ai'
         });
