@@ -289,6 +289,10 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
 
     /**
      * @notice Assign an encrypted bonus for the next payroll run.
+     *
+     * @dev Basic bonus addition — just TFHE.add on ciphertexts.
+     *      See addConditionalBonus() below for the more sophisticated version
+     *      that checks performance tier without revealing the tier.
      */
     function addBonus(
         address        _employee,
@@ -299,6 +303,85 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
 
         euint64 bonus = TFHE.asEuint64(_encBonus, inputProof);
         employees[_employee].bonus = TFHE.add(employees[_employee].bonus, bonus);
+
+        TFHE.allow(employees[_employee].bonus, address(this));
+        TFHE.allow(employees[_employee].bonus, _employee);
+    }
+
+    /**
+     * @notice Add a performance-tier bonus with confidential tier logic.
+     *
+     * @dev ZK-STYLE VERIFICATION LAYER:
+     *
+     *      The employer submits an encrypted performance tier (1–5) along with
+     *      an encrypted bonus amount. We verify — entirely in FHE — that the
+     *      bonus is within the acceptable range for that tier without ever
+     *      decrypting either value on-chain.
+     *
+     *      This is the "ZK-style" part: we don't use actual ZK proofs here
+     *      (that would require a separate proving system), but we achieve the
+     *      same *confidentiality property* using FHE range checks:
+     *
+     *        - Tier 1: bonus must be ≤ $2,000
+     *        - Tier 2: bonus must be ≤ $5,000
+     *        - Tier 3: bonus must be ≤ $10,000
+     *        - Tier 4: bonus must be ≤ $20,000
+     *        - Tier 5: no cap (executive discretion)
+     *
+     *      The verification happens via TFHE.le() comparisons that return an
+     *      encrypted boolean. We then TFHE.select() between the submitted bonus
+     *      and the tier cap — effectively clamping the bonus without revealing
+     *      which branch was taken.
+     *
+     *      An auditor can confirm "bonus policy was enforced" from the audit hash
+     *      without seeing actual bonus amounts or which tier an employee has.
+     *
+     * @param _employee      Employee address
+     * @param _encBonus      FHE-encrypted bonus amount (in micro-USD, 6 decimals)
+     * @param _encTier       FHE-encrypted performance tier (1–5)
+     * @param inputProof     ZK proof from fhevmjs binding both inputs to caller
+     */
+    function addConditionalBonus(
+        address        _employee,
+        einput         _encBonus,
+        einput         _encTier,
+        bytes calldata inputProof
+    ) external onlyRole(PAYROLL_MANAGER_ROLE) {
+        require(employees[_employee].isActive, "Payroll: not found");
+
+        euint64 submittedBonus = TFHE.asEuint64(_encBonus, inputProof);
+        euint64 tier           = TFHE.asEuint64(_encTier,  inputProof);
+
+        // Tier cap table (encrypted constants)
+        // These could also be stored as encrypted state for full confidentiality,
+        // but for simplicity we use plaintext caps here — still fine because
+        // the actual bonus amounts and tiers remain encrypted throughout.
+        euint64 cap1 = TFHE.asEuint64(2_000 * 1e6);   // Tier 1: $2k max
+        euint64 cap2 = TFHE.asEuint64(5_000 * 1e6);   // Tier 2: $5k max
+        euint64 cap3 = TFHE.asEuint64(10_000 * 1e6);  // Tier 3: $10k max
+        euint64 cap4 = TFHE.asEuint64(20_000 * 1e6);  // Tier 4: $20k max
+        // Tier 5 has no cap — represented as uint64 max
+        euint64 cap5 = TFHE.asEuint64(type(uint64).max);
+
+        // Branchless tier selection using FHE equality checks
+        // isTierN = (tier == N) encrypted boolean
+        ebool isTier1 = TFHE.eq(tier, TFHE.asEuint64(1));
+        ebool isTier2 = TFHE.eq(tier, TFHE.asEuint64(2));
+        ebool isTier3 = TFHE.eq(tier, TFHE.asEuint64(3));
+        ebool isTier4 = TFHE.eq(tier, TFHE.asEuint64(4));
+
+        // Build effective cap: start from cap5, layer in caps for lower tiers
+        // This is the branchless equivalent of a switch statement on encrypted data
+        euint64 effectiveCap = cap5;
+        effectiveCap = TFHE.select(isTier4, cap4, effectiveCap);
+        effectiveCap = TFHE.select(isTier3, cap3, effectiveCap);
+        effectiveCap = TFHE.select(isTier2, cap2, effectiveCap);
+        effectiveCap = TFHE.select(isTier1, cap1, effectiveCap);
+
+        // Clamp bonus to tier cap — TFHE.min does this without revealing which branch
+        euint64 approvedBonus = TFHE.min(submittedBonus, effectiveCap);
+
+        employees[_employee].bonus = TFHE.add(employees[_employee].bonus, approvedBonus);
 
         TFHE.allow(employees[_employee].bonus, address(this));
         TFHE.allow(employees[_employee].bonus, _employee);
