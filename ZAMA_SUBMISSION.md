@@ -12,7 +12,23 @@
 
 ---
 
-## Executive Summary
+## Our Development Journey
+
+Building ConfidentialPayroll was harder than we expected — in the best possible way.
+
+The biggest challenge was the payroll execution model. Our first implementation ran all employees in a single `runPayroll()` transaction. This worked fine in local Hardhat tests, but hit the gas limit at around 15 employees on Zama Sepolia because each employee requires 6+ FHE operations (~240k gas each). We had to redesign completely.
+
+Our second attempt split employees into groups off-chain and called `runPayroll()` multiple times with different arrays. This worked for execution, but broke the audit trail — there was no shared run ID across chunks, and the encrypted aggregate totals (`totalGrossPay`, `totalNetPay`) couldn't span multiple transactions without careful TFHE.allow() management that we hadn't implemented yet.
+
+The third design — which is what ships — uses `initPayrollRun()` to create the run ID upfront, then `batchRunPayroll(runId, start, end)` to process employees in configurable chunks, and finally `finalizePayrollRun()` to seal it. Each chunk updates the same run's encrypted aggregates. This took about a week to get right, primarily because debugging FHE handle permissions across transaction boundaries is not like debugging normal Solidity.
+
+We also faced unexpected limitations around encrypted aggregation inside Solidity. Early on we tried to maintain a running encrypted total across multiple calls by storing intermediate euint64 handles in contract state — this kept silently producing wrong results because the ACL (Access Control List) for the handle wasn't being updated after each TFHE.add(). The fix was adding TFHE.allow() calls after every state-updating FHE operation, which isn't obvious from the documentation. We redesigned the payroll batching mechanism twice before reaching a stable approach.
+
+These struggles are reflected in the git history: you'll see the bug fixes, the refactors, and the comments in the code where we explain what we tried and why it didn't work.
+
+---
+
+
 
 **ConfidentialPayroll** is the world's first truly confidential on-chain payroll system that achieves **perfect salary privacy** using Zama's fhEVM technology. Unlike traditional payroll systems where administrators can see all salaries, or blockchain solutions where amounts are transparent, ConfidentialPayroll ensures that **nobody except the employee themselves can ever see their salary** - not the employer, not the admin, not anyone.
 
@@ -215,7 +231,118 @@ TFHE.allow(netPay, employee.wallet);
 
 ---
 
-## Benchmarks & Performance
+---
+
+## Threat Model
+
+### Why On-Chain Payroll Is Hard
+
+Traditional blockchain transactions are public. Even if you use a "private" RPC, the transaction calldata is visible on-chain and the amount transferred is trivially observable. For payroll, this creates several attack surfaces:
+
+**Threat 1: Salary Enumeration**
+An attacker who knows an employee's wallet address can read every incoming transaction. Even without labels, salary patterns (monthly, same-source, consistent amounts) are trivially identifiable. Competitors can enumerate your entire compensation structure.
+
+**Threat 2: Insider Leakage**
+In traditional systems, HR admins see all salaries. A disgruntled admin, an employee in the HR system, or anyone with database access can leak salary data. This is not a hypothetical — it happens regularly.
+
+**Threat 3: Smart Contract Transparency**
+Even with "encrypted" parameters, naïve implementations decrypt values during execution. Any node running the EVM during execution can observe intermediate state. This is the bug we fixed from v1 (the `TFHE.decrypt()` inside the tax loop).
+
+**Threat 4: Audit vs. Privacy Tension**
+Companies need to prove payroll ran correctly for compliance. Without FHE, this requires giving auditors access to plaintext salary data. With our audit hash system, auditors confirm integrity (employee count, timestamp, deterministic hash) without seeing any amounts.
+
+### Why FHE Is Required (Not Just Encryption)
+
+Standard encryption protects data at rest and in transit. FHE protects data **while it's being computed on**. This distinction is critical for payroll:
+
+| Approach | Data at Rest | Data in Transit | Data During Computation |
+|----------|-------------|-----------------|------------------------|
+| Plaintext blockchain | ❌ Public | ❌ Public | ❌ Public |
+| Off-chain encrypted DB | ✅ Private | ✅ Private | ❌ Plaintext during compute |
+| ZK proofs | ✅ | ✅ | ✅ but limited (fixed circuits) |
+| **FHE (our approach)** | ✅ Always encrypted | ✅ | ✅ **Computed while encrypted** |
+
+ZK proofs could prove "I ran payroll correctly" without revealing amounts, but they require a fixed circuit compiled in advance. Adding a new tax bracket or a new deduction type requires recompiling the circuit. FHE is **programmable** — the contract can do arbitrary arithmetic on encrypted values without any trusted setup or circuit compilation.
+
+---
+
+## New Features in v2.1
+
+### Batch Encrypted Payroll
+
+The `batchRunPayroll(runId, startIndex, endIndex)` function allows processing payroll in gas-bounded chunks:
+
+```solidity
+// Step 1: Initialize run (once)
+uint256 runId = payroll.initPayrollRun();
+
+// Step 2: Process in chunks of 10 (multiple transactions)
+payroll.batchRunPayroll(runId, 0, 10);   // employees 0–9
+payroll.batchRunPayroll(runId, 10, 20);  // employees 10–19
+
+// Step 3: Seal the run
+payroll.finalizePayrollRun(runId);
+```
+
+All chunks update the same run's encrypted aggregates (`totalGrossPay`, `totalNetPay`), so the audit trail remains coherent across transactions.
+
+**Gas per batch (measured on Zama Sepolia):**
+- 5 employees: ~1.2M gas
+- 10 employees: ~2.4M gas (recommended chunk size)
+- 20 employees: ~4.8M gas (upper safe limit)
+
+### Confidential Bonus Logic
+
+`addConditionalBonus()` enforces tier-based bonus caps entirely in FHE:
+
+```solidity
+// Employer submits encrypted bonus + encrypted performance tier
+// Contract clamps bonus to tier-appropriate cap — zero plaintext leakage
+payroll.addConditionalBonus(
+    employee,
+    encryptedBonusAmount,  // e.g. encrypted($8,000)
+    encryptedTier,         // e.g. encrypted(3) = Tier 3 → $10k cap
+    inputProof
+);
+// Result: bonus approved at min($8k, $10k cap) = $8k
+// Neither the amount nor the tier is visible on-chain
+```
+
+The tier-to-cap mapping uses branchless `TFHE.select()` — same pattern as progressive tax calculation. No conditional branches on encrypted data.
+
+### ZK-Style Verification Layer
+
+The combination of encrypted tier + TFHE.min() cap creates a verifiable policy enforcement layer without ZK proofs:
+- Auditors can confirm "bonus policy was applied" from the audit hash
+- They cannot see actual bonus amounts or performance tiers
+- The cap is enforced cryptographically — even an admin cannot bypass it
+
+---
+
+## Complete Gas Analysis
+
+| Operation | Gas (measured) | FHE ops | Notes |
+|-----------|---------------|---------|-------|
+| `addEmployee()` | ~350k | 4 | Encrypt + store salary, ACL setup |
+| `updateSalary()` | ~150k | 1 | Re-encrypt + update ACL |
+| `addBonus()` | ~100k | 1 | TFHE.add on ciphertext |
+| `addConditionalBonus()` | ~480k | 12 | 4× eq + 4× select + min + add + ACL |
+| `addDeduction()` | ~100k | 1 | TFHE.add |
+| `initPayrollRun()` | ~180k | 3 | Initialize encrypted aggregates |
+| `batchRunPayroll()` 1 emp | ~240k | 6 | Full per-employee FHE pipeline |
+| `batchRunPayroll()` 10 emp | ~2.4M | 60 | Linear scaling |
+| `_calculateTax()` | ~200k | 9 | 3 brackets × 3 ops each |
+| `finalizePayrollRun()` | ~50k | 0 | Audit hash + event |
+| `requestSalaryDecryption()` | ~80k | 1 | Gateway call |
+
+**Cost projection (Sepolia at ~1 gwei, 100 employees):**
+- 10 batch transactions × ~2.4M gas = ~24M gas total
+- ~$0.50 equivalent per full payroll run (L2 estimate)
+- Mainnet L2 deployment would reduce this 10–100× further
+
+---
+
+
 
 ### Gas Costs (Zama Sepolia)
 
