@@ -1,0 +1,12 @@
+node_modules/
+.env
+cache/
+artifacts/
+typechain-types/
+coverage/
+coverage.json
+gas-report.txt
+deployment.json
+employees.json
+*.log
+.DS_Store
