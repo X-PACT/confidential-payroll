@@ -8,6 +8,13 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../interfaces/IERC7984.sol";
 
+// Helper extension – convert uint256 to bytes32 (Gateway handle format)
+library Uint256ToBytes32 {
+    function toBytes32(uint256 value) internal pure returns (bytes32) {
+        return bytes32(value);
+    }
+}
+
 /**
  * @title ConfidentialPayToken (CPT)
  * @notice ERC-7984 compliant confidential fungible token for payroll disbursement.
@@ -24,6 +31,8 @@ import "../interfaces/IERC7984.sol";
  * Built for Zama Developer Program – Confidential Payroll Challenge
  */
 contract ConfidentialPayToken is IERC7984, ERC165, AccessControl, ReentrancyGuard, GatewayCaller {
+
+    using Uint256ToBytes32 for uint256;
 
     // =========================================================================
     // Roles
@@ -270,12 +279,5 @@ contract ConfidentialPayToken is IERC7984, ERC165, AccessControl, ReentrancyGuar
             msg.sender == holder || _operators[holder][msg.sender] > block.timestamp,
             "CPT: not authorized"
         );
-    }
-}
-
-// Helper extension – convert uint256 to bytes32 (Gateway handle format)
-library Uint256ToBytes32 {
-    function toBytes32(uint256 value) internal pure returns (bytes32) {
-        return bytes32(value);
     }
 }
