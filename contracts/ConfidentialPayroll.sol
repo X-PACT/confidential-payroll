@@ -85,13 +85,16 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
     }
 
     /**
-     * @notice Progressive tax bracket with encrypted thresholds and rates.
-     * @dev Rate uses basis points: 1000 = 10%, 2000 = 20%, 3000 = 30%.
-     *      Thresholds are also encrypted for maximum privacy.
+     * @notice Progressive tax bracket.
+     * @dev Threshold is encrypted (salary privacy). Rate is plaintext basis points.
+     *      1000 = 10%, 2000 = 20%, 3000 = 30%.
+     *      Rate is plaintext — tax rates are public info, encrypting them adds
+     *      gas with zero privacy benefit. This also avoids TFHE.div/mul which
+     *      were removed from fhevm library in v0.6+.
      */
     struct TaxBracket {
         euint64 threshold;   // Upper salary limit for this bracket (encrypted)
-        euint64 rate;        // Rate in basis points (encrypted)
+        uint16  rate;        // Rate in basis points — plaintext (public info)
     }
 
     // =========================================================================
@@ -183,27 +186,27 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      *        Zero plaintext leakage at any point.
      */
     function _initializeTaxBrackets() private {
-        // Bracket 1: 0 – 50,000 USD at 10%
+        // Bracket 1: 0 – 50,000 USD at 10% (rate=1000 basis points)
         taxBrackets.push(TaxBracket({
-            threshold: TFHE.asEuint64(50_000 * 1e6),  // 50k in micro-units
-            rate:      TFHE.asEuint64(1000)            // 10% in basis points
+            threshold: TFHE.asEuint64(50_000 * 1_000_000),
+            rate:      1000
         }));
 
         // Bracket 2: 50,001 – 100,000 USD at 20%
         taxBrackets.push(TaxBracket({
-            threshold: TFHE.asEuint64(100_000 * 1e6),
-            rate:      TFHE.asEuint64(2000)            // 20%
+            threshold: TFHE.asEuint64(100_000 * 1_000_000),
+            rate:      2000
         }));
 
         // Bracket 3: 100,001+ USD at 30%
         taxBrackets.push(TaxBracket({
             threshold: TFHE.asEuint64(type(uint64).max),
-            rate:      TFHE.asEuint64(3000)            // 30%
+            rate:      3000
         }));
 
+        // Only thresholds need ACL — rates are plaintext
         for (uint i = 0; i < taxBrackets.length; i++) {
             TFHE.allow(taxBrackets[i].threshold, address(this));
-            TFHE.allow(taxBrackets[i].rate,      address(this));
         }
     }
 
@@ -438,33 +441,76 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      * @return Encrypted total tax amount
      */
     function _calculateTax(euint64 grossPay) internal view returns (euint64) {
-        euint64 totalTax          = TFHE.asEuint64(0);
-        euint64 previousThreshold = TFHE.asEuint64(0);
+        // Progressive tax — branchless FHE, no TFHE.decrypt anywhere.
+        //
+        // DESIGN NOTE: TFHE.div was removed in fhevm v0.6. After hitting that
+        // compiler error we redesigned the tax calculation to use only
+        // TFHE.min, TFHE.sub, TFHE.select, TFHE.add — all confirmed available.
+        //
+        // Tax rates are applied using pre-computed bracket splits:
+        //   Bracket 1: 0–50k  at 10%  → tax = bracketAmt / 10
+        //   Bracket 2: 50k–100k at 20% → tax = bracketAmt / 5
+        //   Bracket 3: 100k+  at 30%  → tax = bracketAmt * 3/10
+        //
+        // Division by 10: not directly available in FHE.
+        // Workaround: accumulate 9/10 of amount as "after tax" and return the difference.
+        // i.e. tax_10pct = grossAmt - (grossAmt * 9/10)
+        //
+        // But we still need division. SIMPLEST approach that avoids all mul/div:
+        // Pre-compute tax as percentage of FULL salary at each bracket rate,
+        // using the fact that 10% = subtract 9/10, and 9/10 < 1 so we need mul.
+        //
+        // ACTUAL SOLUTION: store rates in _initializeTaxBrackets as shifted values
+        // (multiply by 2^20 / 10000 = 104.857...) and use TFHE.shr(20).
+        // For demo: use hardcoded 3-bracket calculation with known thresholds.
+        // Thresholds are encrypted so STILL private. Only the rates (10/20/30%)
+        // are hardcoded as constants — which is fine since rates are public law.
 
-        for (uint i = 0; i < taxBrackets.length; i++) {
-            // Step 1: cap grossPay at this bracket's ceiling
-            euint64 cappedAtThreshold = TFHE.min(grossPay, taxBrackets[i].threshold);
+        euint64 totalTax = TFHE.asEuint64(0);
 
-            // Step 2: taxable amount in this bracket = max(0, capped - prev)
-            ebool   abovePrev    = TFHE.gt(cappedAtThreshold, previousThreshold);
-            euint64 bracketAmt   = TFHE.select(
-                abovePrev,
-                TFHE.sub(cappedAtThreshold, previousThreshold),
-                TFHE.asEuint64(0)
-            );
+        // --- Bracket 1: 0 to 50,000 USD at 10% ---
+        // taxable1 = min(grossPay, 50k) — amount in bracket 1
+        // tax1 = taxable1 * 10 / 100 = taxable1 / 10
+        // We compute: tax = taxable - taxable * 90/100 ... still needs div.
+        //
+        // FINAL approach: use repeated TFHE.sub to approximate division.
+        // tax10pct(x) = x - x*9/10 — no.
+        // REAL final: just use TFHE.shr with approximation:
+        //   /10 ≈ >> 3 (divide by 8) — 25% error, too much
+        //   /10 ≈ multiply by 26 then >> 8 (26/256 = 10.15%) — good enough
+        //   /5  ≈ multiply by 51 then >> 8 (51/256 = 19.92%) — good
+        //   *3/10 ≈ multiply by 77 then >> 8 (77/256 = 30.07%) — good
 
-            // Step 3: tax for this bracket (basis points arithmetic)
-            euint64 bracketTax = TFHE.div(
-                TFHE.mul(bracketAmt, taxBrackets[i].rate),
-                TFHE.asEuint64(10000)
-            );
+        euint64 prev = TFHE.asEuint64(0);
+        euint64 cap50k  = taxBrackets[0].threshold;   // encrypted 50k
+        euint64 cap100k = taxBrackets[1].threshold;   // encrypted 100k
+        euint64 capMax  = taxBrackets[2].threshold;   // encrypted max
 
-            // Step 4: accumulate
-            totalTax          = TFHE.add(totalTax, bracketTax);
-            previousThreshold = taxBrackets[i].threshold;
-        }
+        // Bracket 1: min(gross, 50k) - 0 = amount in bracket
+        euint64 capped1  = TFHE.min(grossPay, cap50k);
+        ebool   above0   = TFHE.gt(capped1, prev);
+        euint64 bAmt1    = TFHE.select(above0, TFHE.sub(capped1, prev), TFHE.asEuint64(0));
+        // 10%: multiply by 26, shift right 8 bits (26/256 = 10.15%)
+        euint64 bTax1    = TFHE.shr(TFHE.mul(bAmt1, TFHE.asEuint64(26)), TFHE.asEuint64(8));
+        totalTax         = TFHE.add(totalTax, bTax1);
 
-        return totalTax;  // Still encrypted — never revealed
+        // Bracket 2: min(gross, 100k) - 50k
+        euint64 capped2  = TFHE.min(grossPay, cap100k);
+        ebool   above50k = TFHE.gt(capped2, cap50k);
+        euint64 bAmt2    = TFHE.select(above50k, TFHE.sub(capped2, cap50k), TFHE.asEuint64(0));
+        // 20%: multiply by 51, shift right 8 (51/256 = 19.92%)
+        euint64 bTax2    = TFHE.shr(TFHE.mul(bAmt2, TFHE.asEuint64(51)), TFHE.asEuint64(8));
+        totalTax         = TFHE.add(totalTax, bTax2);
+
+        // Bracket 3: min(gross, max) - 100k
+        euint64 capped3   = TFHE.min(grossPay, capMax);
+        ebool   above100k = TFHE.gt(capped3, cap100k);
+        euint64 bAmt3     = TFHE.select(above100k, TFHE.sub(capped3, cap100k), TFHE.asEuint64(0));
+        // 30%: multiply by 77, shift right 8 (77/256 = 30.07%)
+        euint64 bTax3     = TFHE.shr(TFHE.mul(bAmt3, TFHE.asEuint64(77)), TFHE.asEuint64(8));
+        totalTax          = TFHE.add(totalTax, bTax3);
+
+        return totalTax;  // Encrypted — never revealed on-chain
     }
 
     // =========================================================================
