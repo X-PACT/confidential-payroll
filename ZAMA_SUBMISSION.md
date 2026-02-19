@@ -4,11 +4,11 @@
 
 **Project Name:** ConfidentialPayroll  
 **Category:** Confidential Payroll ($5,000 Prize)  
-**Developer:** [Your Name]  
-**Email:** [Your Email]  
-**Discord:** [Your Discord Handle]  
-**GitHub:** https://github.com/yourusername/confidential-payroll  
-**Submission Date:** February 2026  
+**Developer:** [Fahd Kotb]  
+**Email:** [fahd.kotb@tuta.io]  
+**Discord:** [1468100948420202570]  
+**GitHub:** https://github.com/X-PACT/confidential-payroll  
+**Submission Date: February 2026  
 
 ---
 
