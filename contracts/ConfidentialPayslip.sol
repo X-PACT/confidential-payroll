@@ -489,7 +489,6 @@ contract ConfidentialPayslip is AccessControl, ReentrancyGuard, GatewayCaller {
         uint64    rangeMax
     )
         internal
-        view
         returns (ebool)
     {
         if (proofType == ProofType.EMPLOYMENT_ONLY) {

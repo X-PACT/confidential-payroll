@@ -440,7 +440,7 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      * @param grossPay Encrypted gross pay (euint64)
      * @return Encrypted total tax amount
      */
-    function _calculateTax(euint64 grossPay) internal view returns (euint64) {
+    function _calculateTax(euint64 grossPay) internal returns (euint64) {
         // Progressive tax — branchless FHE, no TFHE.decrypt anywhere.
         //
         // DESIGN NOTE: fhevm 0.6 removed TFHE.mul(), TFHE.div(), TFHE.shr().

@@ -327,7 +327,7 @@ contract ConfidentialEquityOracle is AccessControl, ReentrancyGuard, GatewayCall
         euint64 salary,
         uint8 dept,
         uint8 level
-    ) internal view returns (ebool) {
+    ) internal returns (ebool) {
 
         if (claimType == ClaimType.ABOVE_MINIMUM_WAGE) {
             // salary > encryptedMinimumWage (FHE comparison)
