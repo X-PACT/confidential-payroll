@@ -54,16 +54,33 @@ async function main() {
   console.log(`   Soulbound (ERC-5192):  ${isLocked ? "✅" : "❌"}`);
 
   const fs = require("fs");
+
+  // Save to .env.deployed (for reference)
   fs.writeFileSync(".env.deployed",
     `PAYROLL_CONTRACT=${payrollAddress}\nPAY_TOKEN=${tokenAddr}\nEQUITY_ORACLE=${oracleAddr}\nPAYSLIP_CONTRACT=${payslipAddress}\n`
   );
-  console.log("\n📄 Addresses saved to .env.deployed");
+
+  // Save to deployment.json (required by addEmployees.js and runPayroll.js)
+  fs.writeFileSync("deployment.json", JSON.stringify({
+    contractAddress: payrollAddress,
+    payToken: tokenAddr,
+    equityOracle: oracleAddr,
+    payslipContract: payslipAddress,
+    network: "zama-sepolia",
+    deployedAt: new Date().toISOString()
+  }, null, 2));
+
+  console.log("\n📄 Addresses saved to .env.deployed and deployment.json");
   console.log("\n═══════════════════════════════════════════════════════");
   console.log(`  PAYROLL_CONTRACT = "${payrollAddress}"`);
   console.log(`  PAY_TOKEN        = "${tokenAddr}"`);
   console.log(`  EQUITY_ORACLE    = "${oracleAddr}"`);
   console.log(`  PAYSLIP_CONTRACT = "${payslipAddress}"`);
   console.log("═══════════════════════════════════════════════════════");
+  console.log("\n🎯 Next steps:");
+  console.log("   npm run add-employees");
+  console.log("   npm run run-payroll");
+  console.log(`\n🔍 View on explorer: https://explorer.zama.ai/address/${payrollAddress}`);
 }
 
 main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
