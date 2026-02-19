@@ -8,5 +8,10 @@ coverage.json
 gas-report.txt
 deployment.json
 employees.json
+demo-deployment.json
+payroll-run-*.json
+.env.deployed
+demo_OLD.html
+demo_new.html
 *.log
 .DS_Store

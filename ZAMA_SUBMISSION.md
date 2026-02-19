@@ -4,14 +4,29 @@
 
 **Project Name:** ConfidentialPayroll  
 **Category:** Confidential Payroll ($5,000 Prize)  
-**Developer:** [Fahd Kotb]  
-**Email:** [fahd.kotb@tuta.io]  
-**Discord:** [1468100948420202570]  
-**GitHub:** https://github.com/X-PACT/confidential-payroll  
-**Submission Date: February 2026  
+**Developer:** اسمك هنا  
+**Email:** [إيميلك]  
+**Discord:** [Discord Handle]  
+**GitHub:** https://github.com/YOUR_USERNAME/confidential-payroll  
+**Submission Date:** February 2026  
+
+
+## ✅ Deployed Contracts — Ethereum Sepolia (chainId: 11155111)
+
+| Contract | Address |
+|----------|---------|
+| ConfidentialPayroll (main) | `0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF` |
+| ConfidentialPayToken (ERC-7984) | `0x861d347672E3B58Eea899305BDD630EA2A6442a0` |
+| ConfidentialEquityOracle | `0xe9F6209156dE521334Bd56eAf9063Af2882216B3` |
+| ConfidentialPayslip (ERC-5192 Soulbound) | `0xbF160BC0A4C610E8134eAbd3cd1a1a9608d534aC` |
+| PayrollDemo (simplified demo) | `0x1c54Ba9b6457c0EfC31747BE476D6D025AA5f551` |
+
+**Deployed:** February 19, 2026  
+**Deployer:** `0xff68c6A49Cc012B72B16937b615e9eA95fb5F52a`  
+**Explorer:** https://sepolia.etherscan.io/address/0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF  
+**Video Demo:** [VIDEO_URL_HERE]
 
 ---
-
 ## Our Development Journey
 
 Building ConfidentialPayroll was harder than we expected — in the best possible way.
@@ -410,7 +425,7 @@ ConfidentialPayroll/
 ### One-Command Deployment
 ```bash
 # Clone
-git clone https://github.com/yourusername/confidential-payroll
+git clone https://github.com/X-PACT/confidential-payroll
 cd confidential-payroll
 
 # Install
@@ -588,14 +603,14 @@ Thank you for considering ConfidentialPayroll. We look forward to working with t
 ## Appendix: Live Demo
 
 **Deployed Contract (Zama Sepolia):**  
-Address: `[Will be filled after deployment]`  
+Address: `0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF`  
 Explorer: `https://explorer.zama.ai/address/[address]`
 
 **Frontend Demo:**  
 URL: `https://confidential-payroll-demo.vercel.app`
 
 **GitHub Repository:**  
-URL: `https://github.com/yourusername/confidential-payroll`
+URL: `https://github.com/X-PACT/confidential-payroll`
 
 **Video Demo:**  
 URL: `https://youtu.be/[your-demo-video]`
@@ -604,7 +619,7 @@ URL: `https://youtu.be/[your-demo-video]`
 
 **Contact Information:**
 
-**Developer:** [Your Name]  
+**Developer:** اسمك هنا  
 **Email:** [your.email@example.com]  
 **Discord:** [YourHandle#1234]  
 **Twitter:** [@yourhandle]  

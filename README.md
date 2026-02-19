@@ -469,7 +469,7 @@ We welcome contributions! This is built for the community.
 
 Built for **Zama Developer Program**
 
-**Developer:** [Your Name]  
+**Developer:** اسمك هنا  
 **Email:** [Your Email]  
 **Discord:** [Your Discord]  
 **GitHub:** [Your GitHub]
