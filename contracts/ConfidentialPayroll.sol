@@ -93,7 +93,7 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      *      were removed from fhevm library in v0.6+.
      */
     struct TaxBracket {
-        euint64 threshold;   // Upper salary limit for this bracket (encrypted)
+        uint64  threshold;   // Upper salary limit — plaintext (public tax law, not private)
         uint16  rate;        // Rate in basis points — plaintext (public info)
     }
 
@@ -186,28 +186,17 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
      *        Zero plaintext leakage at any point.
      */
     function _initializeTaxBrackets() private {
-        // Bracket 1: 0 – 50,000 USD at 10% (rate=1000 basis points)
-        taxBrackets.push(TaxBracket({
-            threshold: TFHE.asEuint64(50_000 * 1_000_000),
-            rate:      1000
-        }));
+        // Tax thresholds are PUBLIC LAW — not private data, fine as plaintext.
+        // Only salaries themselves are encrypted. The brackets are known to everyone.
+        // This also avoids TFHE calls in the constructor which caused deployment revert
+        // on Sepolia (TFHE ops need the Zama coprocessor to be reachable at deploy time).
 
-        // Bracket 2: 50,001 – 100,000 USD at 20%
-        taxBrackets.push(TaxBracket({
-            threshold: TFHE.asEuint64(100_000 * 1_000_000),
-            rate:      2000
-        }));
-
-        // Bracket 3: 100,001+ USD at 30%
-        taxBrackets.push(TaxBracket({
-            threshold: TFHE.asEuint64(type(uint64).max),
-            rate:      3000
-        }));
-
-        // Only thresholds need ACL — rates are plaintext
-        for (uint i = 0; i < taxBrackets.length; i++) {
-            TFHE.allow(taxBrackets[i].threshold, address(this));
-        }
+        // Bracket 1: 0 – $50k/year at 10%
+        taxBrackets.push(TaxBracket({ threshold: uint64(50_000 * 1_000_000),  rate: 1000 }));
+        // Bracket 2: $50k – $100k at 20%
+        taxBrackets.push(TaxBracket({ threshold: uint64(100_000 * 1_000_000), rate: 2000 }));
+        // Bracket 3: $100k+ at 30% (type(uint64).max = no upper limit)
+        taxBrackets.push(TaxBracket({ threshold: type(uint64).max,            rate: 3000 }));
     }
 
     // =========================================================================

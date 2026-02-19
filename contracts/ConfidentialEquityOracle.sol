@@ -135,9 +135,10 @@ contract ConfidentialEquityOracle is AccessControl, ReentrancyGuard, GatewayCall
         _grantRole(HR_ROLE, msg.sender);
         _grantRole(REGULATOR_ROLE, msg.sender);
 
-        // Initialize minimum wage placeholder (will be set properly)
-        encryptedMinimumWage = TFHE.asEuint64(0);
-        TFHE.allow(encryptedMinimumWage, address(this));
+        // NOTE: encryptedMinimumWage stays uninitialized (euint64 zero-equivalent).
+        // Removed TFHE.asEuint64(0) from constructor — TFHE ops at deploy time
+        // cause "execution reverted" because the Zama coprocessor isn't invoked
+        // until after the contract is deployed. Set via setMinimumWage() after deploy.
     }
 
     // =========================================================================

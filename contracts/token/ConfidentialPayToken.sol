@@ -82,9 +82,11 @@ contract ConfidentialPayToken is IERC7984, ERC165, AccessControl, ReentrancyGuar
         _grantRole(MINTER_ROLE, msg.sender);
         _grantRole(BURNER_ROLE, msg.sender);
 
-        // Initialize encrypted total supply to 0
-        _totalSupply = TFHE.asEuint64(0);
-        TFHE.allow(_totalSupply, address(this));
+        // NOTE: _totalSupply and _balances are euint64 — they start as uninitialized
+        // (zero-equivalent in fhevm). We do NOT call TFHE.asEuint64(0) in the constructor
+        // because TFHE ops require the Zama coprocessor to be active, and calling them
+        // at deploy time caused "execution reverted" on Sepolia.
+        // The first TFHE.add() in mint() will correctly initialize them on first use.
     }
 
     // =========================================================================
