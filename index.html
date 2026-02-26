@@ -1,51 +1,1145 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ConfidentialPayroll Live Demo</title>
-  <meta http-equiv="refresh" content="0; url=./frontend/demo.html">
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #070d14;
-      color: #d9e6f2;
-      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .card {
-      width: min(720px, 92vw);
-      border: 1px solid #1d364d;
-      border-radius: 10px;
-      background: #0b1724;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    }
-    .title {
-      margin: 0 0 8px;
-      font-size: 22px;
-      color: #f5fbff;
-    }
-    .muted {
-      margin: 0;
-      color: #9db4c7;
-    }
-    a {
-      color: #6bd3ff;
-      text-decoration: none;
-    }
-    a:hover { text-decoration: underline; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConfidentialPayroll — Live Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --y: #f5d000;
+  --y2: #ffc200;
+  --y3: #ffe566;
+  --bg: #0a0900;
+  --bg2: #111000;
+  --bg3: #1a1700;
+  --border: #2a2500;
+  --border2: #3d3800;
+  --text: #f0e8c0;
+  --dim: #8a7d40;
+  --muted: #4a4420;
+  --red: #ff3333;
+  --green: #33ff88;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* diagonal stripe bg */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 40px,
+    rgba(245,208,0,0.012) 40px,
+    rgba(245,208,0,0.012) 41px
+  );
+  pointer-events:none; z-index:0;
+}
+
+/* ─── HEADER ─── */
+header {
+  position:sticky; top:0; z-index:100;
+  background: var(--y);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 32px; height:52px;
+}
+.logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:26px; letter-spacing:0.1em;
+  color: var(--bg);
+}
+.logo span { font-size:14px; letter-spacing:0.05em; font-family:'IBM Plex Mono'; font-weight:700; }
+.header-right { display:flex; align-items:center; gap:16px; }
+.net-badge {
+  background: var(--bg);
+  color: var(--y);
+  font-size:10px; padding:4px 10px;
+  border-radius:2px; letter-spacing:0.1em;
+}
+.dot-live {
+  width:7px; height:7px; border-radius:50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: blink 1.8s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+#connectBtn {
+  background: var(--bg);
+  color: var(--y);
+  border:2px solid var(--bg);
+  font-family:'IBM Plex Mono'; font-size:11px; font-weight:700;
+  padding:6px 16px; cursor:pointer; letter-spacing:0.08em;
+  transition: all .15s;
+}
+#connectBtn:hover { background:var(--bg2); }
+
+/* ─── TABS ─── */
+.tabs {
+  display:flex;
+  background: var(--bg2);
+  border-bottom: 2px solid var(--y);
+  padding: 0 32px;
+  overflow-x: auto;
+  gap: 0;
+}
+.tab {
+  background: none; border: none;
+  font-family:'IBM Plex Mono'; font-size:11px; font-weight:700;
+  letter-spacing:0.08em; text-transform:uppercase;
+  color: var(--dim); padding:14px 20px; cursor:pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom:-2px; transition:.15s; white-space:nowrap;
+}
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--y); border-bottom-color:var(--y); }
+.tab .cnt {
+  background:var(--border2); color:var(--y);
+  padding:1px 5px; border-radius:2px; font-size:9px; margin-left:5px;
+}
+
+/* ─── LAYOUT ─── */
+main { position:relative; z-index:1; padding:28px 32px; max-width:1360px; margin:0 auto; }
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* ─── GRID ─── */
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+.g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+
+/* ─── STAT CARD ─── */
+.stat {
+  background:var(--bg2);
+  border:2px solid var(--border2);
+  padding:20px; position:relative; overflow:hidden;
+}
+.stat::after {
+  content:'';
+  position:absolute; top:0; left:0;
+  width:4px; height:100%;
+  background:var(--y);
+}
+.stat-label { font-size:9px; letter-spacing:0.15em; text-transform:uppercase; color:var(--dim); margin-bottom:10px; }
+.stat-val { font-family:'Bebas Neue'; font-size:44px; color:var(--y); line-height:1; }
+.stat-sub { font-size:9px; color:var(--muted); margin-top:6px; }
+
+/* ─── BOX ─── */
+.box {
+  background:var(--bg2);
+  border:2px solid var(--border2);
+}
+.box-head {
+  background:var(--bg3);
+  border-bottom:2px solid var(--border2);
+  padding:12px 18px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.box-title { font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--y); }
+.box-tag { font-size:9px; color:var(--dim); }
+.box-body { padding:20px; }
+
+/* ─── FORM ─── */
+.fg { margin-bottom:14px; }
+label { display:block; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--dim); margin-bottom:5px; }
+input, select {
+  width:100%;
+  background:var(--bg3); border:2px solid var(--border2);
+  color:var(--text); font-family:'IBM Plex Mono'; font-size:11px;
+  padding:9px 12px; outline:none; transition:.15s;
+}
+input:focus, select:focus { border-color:var(--y); }
+select option { background:var(--bg3); }
+.frow { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+.sal-wrap { position:relative; }
+.sal-wrap input { padding-right:70px; }
+.sal-tag {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  font-size:9px; color:var(--y); background:rgba(245,208,0,.12);
+  padding:2px 6px; border:1px solid rgba(245,208,0,.25); letter-spacing:.05em;
+}
+
+/* ─── BUTTONS ─── */
+.btn {
+  font-family:'IBM Plex Mono'; font-weight:700;
+  font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+  padding:10px 20px; border:2px solid; cursor:pointer; transition:.15s;
+}
+.btn-y { background:var(--y); color:var(--bg); border-color:var(--y); }
+.btn-y:hover { background:var(--y3); }
+.btn-out { background:transparent; color:var(--y); border-color:var(--y); }
+.btn-out:hover { background:rgba(245,208,0,.06); }
+.btn-red { background:transparent; color:var(--red); border-color:var(--red); }
+.btn-red:hover { background:rgba(255,51,51,.08); }
+.btn-w { width:100%; margin-top:6px; }
+.btn-sm { padding:5px 10px; font-size:9px; }
+.btn:disabled { opacity:.35; cursor:not-allowed; }
+
+/* ─── ENC PREVIEW ─── */
+.enc-box {
+  background:var(--bg); border:1px solid var(--border2);
+  padding:12px; margin:14px 0; font-size:10px;
+}
+.enc-row { display:flex; align-items:baseline; gap:10px; margin-bottom:6px; }
+.enc-row:last-child { margin:0; }
+.enc-k { color:var(--dim); width:72px; flex-shrink:0; }
+.enc-v { color:var(--y); flex:1; word-break:break-all; }
+.enc-v.hex { color:var(--muted); font-size:8px; letter-spacing:.04em; }
+.enc-arr { color:var(--border2); }
+
+/* ─── TABLE ─── */
+table { width:100%; border-collapse:collapse; }
+th { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); padding:9px 14px; border-bottom:2px solid var(--border2); text-align:left; }
+td { padding:11px 14px; border-bottom:1px solid var(--border); font-size:11px; vertical-align:middle; }
+tr:hover td { background:rgba(245,208,0,.025); }
+tr:last-child td { border-bottom:none; }
+.badge { display:inline-block; padding:2px 7px; font-size:9px; letter-spacing:.06em; text-transform:uppercase; border:1px solid; }
+.badge-on { color:var(--y); border-color:rgba(245,208,0,.3); background:rgba(245,208,0,.07); }
+.badge-off { color:var(--red); border-color:rgba(255,51,51,.3); background:rgba(255,51,51,.07); }
+.enc-cell { font-size:9px; color:var(--muted); letter-spacing:.03em; }
+
+/* ─── TERMINAL ─── */
+.term {
+  background:#050400; border:1px solid var(--border2);
+  padding:14px; font-size:10px; line-height:1.9;
+  max-height:300px; overflow-y:auto; font-family:'IBM Plex Mono';
+}
+.term::-webkit-scrollbar { width:3px; }
+.term::-webkit-scrollbar-track { background:#050400; }
+.term::-webkit-scrollbar-thumb { background:var(--border2); }
+.ll { display:block; }
+.lt { color:var(--muted); }
+.li { color:var(--y); }
+.lf { color:#cc9900; }
+.lx { color:#5588ff; }
+.le { color:var(--red); }
+.ld { color:#888; }
+.blink { animation:blink 1s step-end infinite; }
+
+/* ─── STEP ─── */
+.step { display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--border); }
+.step:last-child { border:none; }
+.snum {
+  width:28px; height:28px; border:2px solid; display:flex;
+  align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0;
+}
+.snum.pend { border-color:var(--border2); color:var(--muted); }
+.snum.run { border-color:var(--y); color:var(--y); animation:blink 1.2s infinite; }
+.snum.done { background:var(--y); color:var(--bg); border-color:var(--y); }
+.sbody { flex:1; }
+.stitle { font-size:11px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.sdesc { font-size:9px; color:var(--dim); line-height:1.6; }
+.stx { font-size:9px; color:var(--y); margin-top:5px; word-break:break-all; }
+.prog { background:var(--bg3); height:4px; margin:8px 0; overflow:hidden; }
+.prog-bar { height:100%; background:var(--y); transition:width 1s; }
+
+/* ─── PAYSLIP ─── */
+.ps-card {
+  border:2px solid var(--y);
+  padding:24px; position:relative; overflow:hidden;
+}
+.ps-card::before {
+  content:'SOULBOUND · ERC-5192 · NON-TRANSFERABLE';
+  position:absolute; top:10px; right:12px;
+  font-size:7px; color:var(--muted); letter-spacing:.1em;
+}
+.ps-logo { font-family:'Bebas Neue'; font-size:28px; color:var(--y); margin-bottom:16px; letter-spacing:.1em; }
+.ps-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:10px; }
+.ps-row:last-child { border:none; }
+.ps-k { color:var(--dim); }
+.ps-v { color:var(--text); text-align:right; }
+.ps-v.enc { color:var(--muted); font-size:9px; }
+.ps-v.ok { color:var(--y); font-weight:700; }
+.ps-v.fail { color:var(--red); font-weight:700; }
+.ps-seal { margin-top:14px; padding:10px; border:1px solid rgba(245,208,0,.3); text-align:center; font-size:9px; color:var(--y); background:rgba(245,208,0,.04); letter-spacing:.05em; }
+
+/* ─── CLAIM ─── */
+.claim { border:2px solid var(--border2); padding:12px; margin-bottom:8px; cursor:pointer; transition:.15s; }
+.claim:hover { border-color:var(--border2); background:rgba(245,208,0,.02); }
+.claim.sel { border-color:var(--y); background:rgba(245,208,0,.04); }
+.claim-title { font-size:10px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.claim-desc { font-size:9px; color:var(--dim); line-height:1.5; }
+
+/* ─── CERT ─── */
+.cert {
+  border:1px solid var(--border2); padding:12px; margin-bottom:8px;
+}
+.cert-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.cert-name { font-size:11px; color:var(--text); }
+.cert-ok { color:var(--y); font-size:11px; font-weight:700; }
+.cert-fail { color:var(--red); font-size:11px; font-weight:700; }
+.cert-sub { font-size:9px; color:var(--dim); }
+
+/* ─── GATEWAY MODAL ─── */
+.ov { display:none; position:fixed; inset:0; background:rgba(5,4,0,.92); backdrop-filter:blur(6px); z-index:500; align-items:center; justify-content:center; }
+.ov.open { display:flex; }
+.modal { background:var(--bg2); border:2px solid var(--y); padding:28px; width:460px; max-width:92vw; position:relative; }
+.modal h3 { font-family:'Bebas Neue'; font-size:24px; letter-spacing:.1em; color:var(--y); margin-bottom:6px; }
+.modal p { font-size:10px; color:var(--dim); margin-bottom:16px; line-height:1.6; }
+.modal-x { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--dim); cursor:pointer; font-size:14px; }
+.spin-ring { width:60px; height:60px; margin:0 auto 20px; }
+.spin-ring svg { animation:spinr 3s linear infinite; }
+@keyframes spinr { to { transform:rotate(360deg); } }
+.spin-core { position:absolute; inset:12px; background:var(--y); display:flex; align-items:center; justify-content:center; font-size:20px; }
+
+/* ─── NOTIF ─── */
+#notif {
+  position:fixed; bottom:20px; right:20px; z-index:999;
+  background:var(--y); color:var(--bg);
+  padding:12px 18px; max-width:320px;
+  transform:translateY(120%); transition:transform .3s ease;
+  border-left:4px solid #000;
+}
+#notif.on { transform:translateY(0); }
+#notif .nt { font-size:11px; font-weight:700; margin-bottom:3px; }
+#notif .nb { font-size:10px; opacity:.8; }
+
+/* ─── HERO ─── */
+.hero { padding:40px 0 36px; margin-bottom:28px; position:relative; }
+.hero-tag {
+  display:inline-block; background:var(--y); color:var(--bg);
+  font-size:9px; letter-spacing:.15em; text-transform:uppercase;
+  padding:4px 10px; margin-bottom:20px; font-weight:700;
+}
+.hero h1 {
+  font-family:'Bebas Neue'; font-size:clamp(40px,7vw,80px);
+  letter-spacing:.05em; line-height:1; margin-bottom:14px; color:var(--y);
+}
+.hero h1 span { color:var(--text); }
+.hero p { font-size:12px; color:var(--dim); line-height:1.8; max-width:560px; margin-bottom:24px; }
+.hero-btns { display:flex; gap:12px; flex-wrap:wrap; }
+
+/* floating hex */
+.hex-float { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.hc { position:absolute; font-size:10px; color:var(--muted); opacity:.4; animation:fup 9s linear infinite; font-family:'IBM Plex Mono'; }
+@keyframes fup { 0%{transform:translateY(60%);opacity:.4} 100%{transform:translateY(-120px);opacity:0} }
+
+/* ─── RANGE ─── */
+input[type=range] { -webkit-appearance:none; height:3px; background:var(--border2); border:none; padding:0; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:var(--y); cursor:pointer; }
+.rrow { display:flex; gap:12px; align-items:center; }
+.rlabel { font-size:10px; color:var(--dim); width:90px; flex-shrink:0; }
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px) { .g2,.g3 { grid-template-columns:1fr; } .g4 { grid-template-columns:1fr 1fr; } main { padding:16px; } header { padding:0 16px; } .tabs { padding:0 16px; } }
+@media(max-width:500px) { .g4 { grid-template-columns:1fr; } }
+
+.mt { margin-top:20px; }
+.mb { margin-bottom:20px; }
+.tc { text-align:center; }
+.fl { display:flex; }
+.g8 { gap:8px; }
+.ac { align-items:center; }
+.jb { justify-content:space-between; }
+.tac { color:var(--y); }
+.td { color:var(--dim); }
+.tm { color:var(--muted); }
+.tr { color:var(--red); }
+.xs { font-size:9px; }
+.sm { font-size:11px; }
+.fw7 { font-weight:700; }
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1 class="title">Redirecting to the live demo...</h1>
-    <p class="muted">
-      If redirection does not start automatically, open
-      <a href="./frontend/demo.html">frontend/demo.html</a>.
-    </p>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">ConfidentialPayroll <span>/ DEMO</span></div>
+  <div class="header-right">
+    <div class="dot-live"></div>
+    <div class="net-badge">ZAMA SEPOLIA · 11155111</div>
+    <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
   </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="go('dash',this)">Dashboard</button>
+  <button class="tab" onclick="go('emp',this)">Employees <span class="cnt" id="ec">0</span></button>
+  <button class="tab" onclick="go('pay',this)">Payroll</button>
+  <button class="tab" onclick="go('ps',this)">Payslips <span class="cnt" id="psc">0</span></button>
+  <button class="tab" onclick="go('eq',this)">Equity Oracle</button>
+  <button class="tab" onclick="go('ct',this)">Contracts</button>
+</div>
+
+<main>
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div class="panel active" id="p-dash">
+
+  <div class="hero">
+    <div class="hex-float" id="hf"></div>
+    <div class="hero-tag">Zama Developer Program · Confidential Payroll Challenge</div>
+    <h1>PAYROLL WITH <span>ZERO</span><br>LEAKAGE</h1>
+    <p>Every salary, bonus, and tax calculation runs on FHE-encrypted data. Nobody — not even the deployer — ever sees a plaintext number. Built on Zama fhEVM + ERC-7984 + ERC-5192.</p>
+    <div class="hero-btns">
+      <button class="btn btn-y" onclick="go('emp',null)">Add Employees →</button>
+      <button class="btn btn-out" onclick="go('pay',null)">Run Payroll</button>
+    </div>
+  </div>
+
+  <div class="g4">
+    <div class="stat"><div class="stat-label">Active Employees</div><div class="stat-val" id="sv1">0</div><div class="stat-sub">on-chain · salaries: FHE</div></div>
+    <div class="stat"><div class="stat-label">Payroll Runs</div><div class="stat-val" id="sv2">0</div><div class="stat-sub">totals: euint64 encrypted</div></div>
+    <div class="stat"><div class="stat-label">Total Disbursed</div><div class="stat-val" style="font-size:28px;padding-top:8px">——</div><div class="stat-sub">Gateway only · encrypted</div></div>
+    <div class="stat"><div class="stat-label">Payslips Issued</div><div class="stat-val" id="sv3">0</div><div class="stat-sub">ERC-5192 soulbound NFTs</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="box">
+      <div class="box-head"><span class="box-title">FHE Operations Log</span><span class="box-tag">fhEVM v0.6</span></div>
+      <div class="box-body" style="padding:0">
+        <div class="term" id="fhelog">
+          <span class="ll"><span class="lt">[init]</span> <span class="li">TFHE coprocessor: connected</span></span>
+          <span class="ll"><span class="lt">[init]</span> <span class="lf">fhEVM v0.6 · ACL ready</span></span>
+          <span class="ll"><span class="lt">[init]</span> <span class="ld">Gateway: 0xc8c9303Cd7736b06BE05b9C9e38EA2E96E6sCzama</span></span>
+          <span class="ll"><span class="lt">[init]</span> <span class="li">System ready for encrypted payroll</span></span>
+          <span class="ll"><span class="blink">█</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">Deployed Contracts</span><span class="box-tag tac">● LIVE</span></div>
+      <div class="box-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <div class="xs tm mb" style="margin-bottom:4px;letter-spacing:.08em">CONFIDENTIALPAYROLL (MAIN)</div>
+            <div class="xs"><a href="https://sepolia.etherscan.io/address/0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF" target="_blank" style="color:var(--y);text-decoration:none">0xA1b2...20dF ↗</a></div>
+          </div>
+          <div>
+            <div class="xs tm" style="margin-bottom:4px;letter-spacing:.08em">CONFIDENTIALPAYTOKEN (ERC-7984)</div>
+            <div class="xs"><a href="https://sepolia.etherscan.io/address/0x861d347672E3B58Eea899305BDD630EA2A6442a0" target="_blank" style="color:var(--y);text-decoration:none">0x861d...42a0 ↗</a></div>
+          </div>
+          <div>
+            <div class="xs tm" style="margin-bottom:4px;letter-spacing:.08em">CONFIDENTIALEQUITYORACLE</div>
+            <div class="xs"><a href="https://sepolia.etherscan.io/address/0xe9F6209156dE521334Bd56eAf9063Af2882216B3" target="_blank" style="color:var(--y);text-decoration:none">0xe9F6...16B3 ↗</a></div>
+          </div>
+          <div>
+            <div class="xs tm" style="margin-bottom:4px;letter-spacing:.08em">CONFIDENTIALPAYSLIP (ERC-5192)</div>
+            <div class="xs"><a href="https://sepolia.etherscan.io/address/0xbF160BC0A4C610E8134eAbd3cd1a1a9608d534aC" target="_blank" style="color:var(--y);text-decoration:none">0xbF16...34aC ↗</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ EMPLOYEES ══════════ -->
+<div class="panel" id="p-emp">
+  <div class="g2 mb">
+    <div class="box">
+      <div class="box-head"><span class="box-title">Add Employee</span><span class="box-tag">ADMIN_ROLE</span></div>
+      <div class="box-body">
+        <div class="fg">
+          <label>Wallet Address</label>
+          <input id="eAddr" placeholder="0x..." />
+        </div>
+        <div class="fg">
+          <label>Monthly Salary (USD) — encrypted before sending</label>
+          <div class="sal-wrap">
+            <input type="number" id="eSal" placeholder="e.g. 8500" oninput="encPreview()">
+            <div class="sal-tag">FHE ✓</div>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Department</label>
+            <select id="eDept"><option value="1">Engineering</option><option value="2">Product</option><option value="3">Design</option><option value="4">Marketing</option><option value="5">Finance</option></select>
+          </div>
+          <div class="fg"><label>Level</label>
+            <select id="eLvl"><option value="1">L1 Junior</option><option value="2">L2 Mid</option><option value="3">L3 Senior</option><option value="4">L4 Staff</option><option value="5">L5 Principal</option></select>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Name</label><input id="eName" placeholder="Alice Smith" /></div>
+          <div class="fg"><label>Gender</label>
+            <select id="eGender"><option value="0">Undisclosed</option><option value="1">Male</option><option value="2">Female</option></select>
+          </div>
+        </div>
+        <div class="enc-box" id="encBox" style="display:none">
+          <div class="enc-row"><span class="enc-k">Plaintext</span><span class="enc-arr">→</span><span class="enc-v" id="ep1">—</span></div>
+          <div class="enc-row"><span class="enc-k">fhevm-js</span><span class="enc-arr">→</span><span class="enc-v hex" id="ep2">—</span></div>
+          <div class="enc-row"><span class="enc-k">On-chain</span><span class="enc-arr">→</span><span class="enc-v">euint64 ciphertext ✓</span></div>
+        </div>
+        <button class="btn btn-y btn-w" onclick="addEmp()">Encrypt & Register Employee →</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">Quick Demo</span></div>
+      <div class="box-body">
+        <p class="xs td" style="margin-bottom:14px;line-height:1.7">Load 5 pre-configured demo employees with encrypted salaries to test the full payroll flow:</p>
+        <button class="btn btn-out btn-w" onclick="loadDemo()">⚡ Load 5 Sample Employees</button>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+          <div class="xs td">Alice Chen · Engineering L3 · <span class="tac">████ euint64</span></div>
+          <div class="xs td">Bob Martinez · Product L2 · <span class="tac">████ euint64</span></div>
+          <div class="xs td">Carol Johnson · Design L4 · <span class="tac">████ euint64</span></div>
+          <div class="xs td">David Kim · Engineering L5 · <span class="tac">████ euint64</span></div>
+          <div class="xs td">Eve Wilson · Finance L3 · <span class="tac">████ euint64</span></div>
+        </div>
+        <div style="margin-top:20px;padding:12px;border:1px solid var(--border2);font-size:9px;color:var(--dim);line-height:1.7">
+          All salary values are encrypted client-side via fhevm-js before broadcasting. The blockchain only stores the ciphertext handle (euint64). No plaintext number ever touches the chain.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="box-head"><span class="box-title">Employee Registry</span><span class="box-tag">All salaries are FHE-encrypted on-chain</span></div>
+    <div class="box-body" style="padding:0">
+      <table>
+        <thead><tr><th>Name</th><th>Address</th><th>Dept</th><th>Level</th><th>Salary</th><th>Last Paid</th><th>Status</th><th></th></tr></thead>
+        <tbody id="etbl"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px;font-size:10px">No employees — add one or load demo data</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PAYROLL ══════════ -->
+<div class="panel" id="p-pay">
+  <div class="g2">
+    <div class="box">
+      <div class="box-head"><span class="box-title">Execute Payroll Run</span><span class="box-tag">PAYROLL_MANAGER_ROLE</span></div>
+      <div class="box-body">
+        <div class="fg">
+          <label>Batch Size</label>
+          <select id="bsz"><option value="5">5 employees (~1.2M gas)</option><option value="10" selected>10 employees (~2.4M gas) ← recommended</option><option value="20">20 employees (~4.8M gas)</option></select>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border2);padding:12px;margin-bottom:16px">
+          <div class="xs tm" style="margin-bottom:8px;letter-spacing:.08em">TAX BRACKETS (PUBLIC LAW — FHE COMPUTED)</div>
+          <div class="xs td fl jb" style="margin-bottom:4px"><span>$0 – $50,000</span><span class="tac">≈9.375%  (shr 3 – shr 5)</span></div>
+          <div class="xs td fl jb" style="margin-bottom:4px"><span>$50k – $100k</span><span class="tac">≈18.75% (shr 2 – shr 4)</span></div>
+          <div class="xs td fl jb"><span>$100k+</span><span class="tac">≈31.25% (shr 1 – shr 2 – shr 4)</span></div>
+        </div>
+
+        <div class="step">
+          <div class="snum pend" id="s1n">1</div>
+          <div class="sbody">
+            <div class="stitle">initPayrollRun()</div>
+            <div class="sdesc">Creates a new run ID with shared encrypted aggregates (totalGrossPay, totalNetPay, totalDeductions)</div>
+            <div class="stx" id="s1tx"></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="snum pend" id="s2n">2</div>
+          <div class="sbody">
+            <div class="stitle">batchRunPayroll(runId, start, end)</div>
+            <div class="sdesc">Per employee: grossPay = salary + bonus → FHE tax → netPay → mint CPT tokens. Chunked for gas safety.</div>
+            <div class="prog" id="s2p" style="display:none"><div class="prog-bar" id="s2b" style="width:0"></div></div>
+            <div class="stx" id="s2tx"></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="snum pend" id="s3n">3</div>
+          <div class="sbody">
+            <div class="stitle">finalizePayrollRun(runId)</div>
+            <div class="sdesc">Seals the run, emits audit hash. All encrypted aggregates remain opaque.</div>
+            <div class="stx" id="s3tx"></div>
+          </div>
+        </div>
+        <button class="btn btn-y btn-w mt" id="runBtn" onclick="runPayroll()">Execute Payroll Run →</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">FHE Transaction Log</span></div>
+      <div class="box-body" style="padding:0">
+        <div class="term" id="paylog" style="max-height:450px;border:none">
+          <span class="ll"><span class="li">Waiting for payroll run...</span></span>
+          <span class="ll"><span class="blink">█</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box mt" id="runHist" style="display:none">
+    <div class="box-head"><span class="box-title">Payroll Run History</span></div>
+    <div class="box-body" style="padding:0">
+      <table>
+        <thead><tr><th>Run ID</th><th>Date</th><th>Employees</th><th>Gross (encrypted)</th><th>Net (encrypted)</th><th>Audit Hash</th><th>Status</th></tr></thead>
+        <tbody id="rtbl"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PAYSLIPS ══════════ -->
+<div class="panel" id="p-ps">
+  <div class="g2">
+    <div class="box">
+      <div class="box-head"><span class="box-title">Request Verifiable Payslip</span><span class="box-tag" style="color:#aa88ff">ERC-5192 SOULBOUND</span></div>
+      <div class="box-body">
+        <div class="fg"><label>Employee</label><select id="psEmp"><option value="">Select...</option></select></div>
+        <div class="fg">
+          <label>Verifier Address (bank, landlord, etc.)</label>
+          <input id="psVer" placeholder="0x... (only this address can read the result)" />
+        </div>
+        <div class="fg"><label>Purpose</label>
+          <select id="psPurp"><option value="BANK_LOAN">Bank Loan</option><option value="APARTMENT_RENTAL">Apartment Rental</option><option value="VISA_APPLICATION">Visa Application</option><option value="MORTGAGE">Mortgage</option><option value="CREDIT_CARD">Credit Card</option><option value="EMPLOYMENT_PROOF">Employment Proof</option></select>
+        </div>
+        <div class="fg"><label>Proof Type</label>
+          <select id="psPrf" onchange="updPrf()"><option value="RANGE_PROOF">Range Proof — salary between $X and $Y</option><option value="THRESHOLD_PROOF">Threshold Proof — salary above $X</option><option value="EMPLOYMENT_ONLY">Employment Only — just prove I work here</option></select>
+        </div>
+        <div id="rfields">
+          <div class="fg">
+            <label>Salary Range You Want to Prove (you choose what to reveal)</label>
+            <div class="rrow" style="margin-bottom:8px">
+              <span class="rlabel" id="rl1">Min: $5,000</span>
+              <input type="range" id="rmin" min="0" max="30000" step="500" value="5000" oninput="updRange()">
+            </div>
+            <div class="rrow">
+              <span class="rlabel" id="rl2">Max: $20,000</span>
+              <input type="range" id="rmax" min="0" max="50000" step="500" value="20000" oninput="updRange()">
+            </div>
+          </div>
+        </div>
+        <div class="fg"><label>Job Title (your choice to disclose)</label><input id="psTitle" placeholder="e.g. Software Engineer" /></div>
+        <div style="background:var(--bg);border:1px solid var(--border2);padding:10px;margin-bottom:14px;font-size:9px;color:var(--dim);line-height:1.7">
+          🔐 Exact salary is <strong style="color:var(--y)">never decrypted or revealed</strong>. Only the boolean result of the range check is decrypted via Zama Gateway and recorded in the soulbound NFT.
+        </div>
+        <button class="btn btn-y btn-w" onclick="reqPS()">Generate Confidential Payslip →</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">Payslip Preview</span><span class="box-tag">Verifier View</span></div>
+      <div class="box-body">
+        <div class="ps-card" id="psPrev">
+          <div class="ps-logo">🔐 CONFIDENTIAL PAYROLL</div>
+          <div class="ps-row"><span class="ps-k">Status</span><span class="ps-v tm">— awaiting request —</span></div>
+          <div class="ps-row"><span class="ps-k">Exact Salary</span><span class="ps-v enc">██████████ (euint64 · FHE)</span></div>
+          <div class="ps-row"><span class="ps-k">Token Type</span><span class="ps-v">ERC-5192 Soulbound NFT</span></div>
+        </div>
+        <div id="psListWrap" style="display:none;margin-top:16px">
+          <div class="xs tm" style="margin-bottom:8px;letter-spacing:.08em">ISSUED PAYSLIPS</div>
+          <div id="psList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ EQUITY ══════════ -->
+<div class="panel" id="p-eq">
+  <div style="background:var(--bg2);border:2px solid var(--border2);padding:14px;margin-bottom:20px;font-size:10px;color:var(--dim);line-height:1.7;border-left:4px solid var(--y)">
+    <strong style="color:var(--y)">EU Pay Transparency Directive (2023/970)</strong> — compliance certificates without revealing any individual salary. FHE computes the proof on encrypted data. Only the boolean result is decrypted by Zama Gateway.
+  </div>
+  <div class="g2">
+    <div class="box">
+      <div class="box-head"><span class="box-title">Request Equity Certificate</span><span class="box-tag">HR_ROLE</span></div>
+      <div class="box-body">
+        <div class="fg"><label>Employee</label><select id="eqEmp"><option value="">Select...</option></select></div>
+        <div class="fg">
+          <label>Claim Type</label>
+          <div style="margin-top:8px">
+            <div class="claim sel" id="cl0" onclick="selClaim(0)"><div class="claim-title">ABOVE_MINIMUM_WAGE</div><div class="claim-desc">Proves salary > minimum wage. FHE comparison on encrypted values only.</div></div>
+            <div class="claim" id="cl1" onclick="selClaim(1)"><div class="claim-title">WITHIN_SALARY_BAND</div><div class="claim-desc">Proves bandMin ≤ salary ≤ bandMax. TFHE.ge AND TFHE.le on encrypted data.</div></div>
+            <div class="claim" id="cl2" onclick="selClaim(2)"><div class="claim-title">ABOVE_DEPARTMENT_MEDIAN</div><div class="claim-desc">Proves salary > encrypted dept median. Key for EU gender pay gap reporting.</div></div>
+          </div>
+        </div>
+        <button class="btn btn-y btn-w" onclick="reqCert()">Request FHE Certificate →</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">Issued Certificates</span><span class="box-tag" id="certCnt">0 certs</span></div>
+      <div class="box-body">
+        <div id="certList"><div style="text-align:center;color:var(--muted);font-size:10px;padding:28px 0">No certificates issued yet</div></div>
+        <div style="margin-top:16px;padding:10px;border:1px solid var(--border2);font-size:9px;color:var(--dim);line-height:1.7">
+          <strong style="color:var(--text)">Process:</strong> FHE comparison on encrypted salary vs encrypted reference → ebool → Gateway decrypts boolean only → on-chain attestation issued. Zero salary disclosure.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CONTRACTS ══════════ -->
+<div class="panel" id="p-ct">
+  <div class="g3 mb">
+    <div class="box">
+      <div class="box-head"><span class="box-title">ConfidentialPayroll</span></div>
+      <div class="box-body">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+          <div class="xs fl jb"><span class="tm">Network</span><span>Ethereum Sepolia</span></div>
+          <div class="xs fl jb"><span class="tm">Chain ID</span><span>11155111</span></div>
+          <div class="xs fl jb"><span class="tm">Deployed</span><span>Feb 19, 2026</span></div>
+          <div class="xs fl jb"><span class="tm">fhEVM</span><span class="tac">v0.6</span></div>
+          <div class="xs fl jb"><span class="tm">viaIR</span><span class="tac">true</span></div>
+        </div>
+        <div class="xs tm mb" style="margin-bottom:4px">Address</div>
+        <div class="xs"><a href="https://sepolia.etherscan.io/address/0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF" target="_blank" style="color:var(--y);text-decoration:none;word-break:break-all">0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF ↗</a></div>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
+          <span class="badge badge-on">ADMIN_ROLE</span>
+          <span class="badge" style="color:#5588ff;border-color:rgba(85,136,255,.3);background:rgba(85,136,255,.07)">PAYROLL_MANAGER_ROLE</span>
+          <span class="badge" style="color:var(--y2);border-color:rgba(255,194,0,.3);background:rgba(255,194,0,.07)">AUDITOR_ROLE</span>
+        </div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">ERC-7984 Token (CPT)</span></div>
+      <div class="box-body">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+          <div class="xs fl jb"><span class="tm">Symbol</span><span>CPT</span></div>
+          <div class="xs fl jb"><span class="tm">Decimals</span><span>6 (like USDC)</span></div>
+          <div class="xs fl jb"><span class="tm">Balances</span><span class="tac">FHE encrypted</span></div>
+          <div class="xs fl jb"><span class="tm">Interface ID</span><span>0x4958f2a4</span></div>
+          <div class="xs fl jb"><span class="tm">ERC-165</span><span class="tac">✓ verified</span></div>
+        </div>
+        <div class="xs tm mb" style="margin-bottom:4px">Address</div>
+        <div class="xs"><a href="https://sepolia.etherscan.io/address/0x861d347672E3B58Eea899305BDD630EA2A6442a0" target="_blank" style="color:var(--y);text-decoration:none;word-break:break-all">0x861d347672E3B58Eea899305BDD630EA2A6442a0 ↗</a></div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-head"><span class="box-title">Equity Oracle</span></div>
+      <div class="box-body">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+          <div class="xs fl jb"><span class="tm">Claim Types</span><span>4</span></div>
+          <div class="xs fl jb"><span class="tm">Directive</span><span>EU 2023/970</span></div>
+          <div class="xs fl jb"><span class="tm">Salary revealed</span><span class="tr">NEVER</span></div>
+          <div class="xs fl jb"><span class="tm">Payslips</span><span>ERC-5192</span></div>
+        </div>
+        <div class="xs tm mb" style="margin-bottom:4px">EquityOracle Address</div>
+        <div class="xs"><a href="https://sepolia.etherscan.io/address/0xe9F6209156dE521334Bd56eAf9063Af2882216B3" target="_blank" style="color:var(--y);text-decoration:none;word-break:break-all">0xe9F6209156dE521334Bd56eAf9063Af2882216B3 ↗</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="box-head"><span class="box-title">FHE Operations — fhEVM 0.6 Compatibility</span></div>
+    <div class="box-body" style="padding:0">
+      <table>
+        <thead><tr><th>Operation</th><th>Status</th><th>Used For</th></tr></thead>
+        <tbody>
+          <tr><td class="tac" style="font-weight:700">TFHE.add()</td><td><span class="badge badge-on">✓ Available</span></td><td class="xs td">salary + bonus, run aggregates</td></tr>
+          <tr><td class="tac" style="font-weight:700">TFHE.sub()</td><td><span class="badge badge-on">✓ Available</span></td><td class="xs td">gross − deductions, tax computation</td></tr>
+          <tr><td class="tac" style="font-weight:700">TFHE.min()</td><td><span class="badge badge-on">✓ Available</span></td><td class="xs td">overflow guard, bracket capping</td></tr>
+          <tr><td class="tac" style="font-weight:700">TFHE.shr(x, n)</td><td><span class="badge badge-on">✓ Available (scalar n)</span></td><td class="xs td">tax rate approximation (10%, 20%, 30%)</td></tr>
+          <tr><td class="tac" style="font-weight:700">TFHE.select()</td><td><span class="badge badge-on">✓ Available</span></td><td class="xs td">branchless conditionals in tax loop</td></tr>
+          <tr><td class="tac" style="font-weight:700">TFHE.gt/lt/ge/le()</td><td><span class="badge badge-on">✓ Available</span></td><td class="xs td">bracket comparisons, range proofs</td></tr>
+          <tr><td class="tac" style="font-weight:700">TFHE.and/or()</td><td><span class="badge badge-on">✓ Available</span></td><td class="xs td">compound boolean proofs (payslips)</td></tr>
+          <tr><td style="color:var(--red);text-decoration:line-through">TFHE.mul()</td><td><span class="badge badge-off">✗ Removed v0.6</span></td><td class="xs td">replaced by TFHE.shr() approximation</td></tr>
+          <tr><td style="color:var(--red);text-decoration:line-through">TFHE.div()</td><td><span class="badge badge-off">✗ Removed v0.6</span></td><td class="xs td">replaced by TFHE.shr() approximation</td></tr>
+          <tr><td style="color:var(--red);text-decoration:line-through">TFHE.decrypt()</td><td><span class="badge badge-off">✗ Wrong usage</span></td><td class="xs td">async Gateway only — never in payroll loop</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- GATEWAY MODAL -->
+<div class="ov" id="gw">
+  <div class="modal">
+    <button class="modal-x" onclick="closeGW()">✕</button>
+    <div class="spin-ring" style="position:relative">
+      <svg viewBox="0 0 60 60" fill="none" width="60" height="60">
+        <circle cx="30" cy="30" r="25" stroke="#2a2500" stroke-width="2"/>
+        <circle cx="30" cy="30" r="25" stroke="#f5d000" stroke-width="2" stroke-dasharray="35 122" stroke-linecap="round"/>
+      </svg>
+      <div class="spin-core" style="position:absolute;inset:12px;background:var(--y);display:flex;align-items:center;justify-content:center;font-size:18px">🔑</div>
+    </div>
+    <h3 id="gwTitle">ZAMA GATEWAY</h3>
+    <p id="gwBody">Processing threshold decryption...</p>
+    <div class="term" id="gwLog" style="max-height:160px"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif">
+  <div class="nt" id="ntt">—</div>
+  <div class="nb" id="ntb">—</div>
+</div>
+
+<script>
+// ── STATE ──
+const S = { emps:[], runs:[], pss:[], certs:[], claim:0 };
+const DEPTS = ['','Engineering','Product','Design','Marketing','Finance'];
+const LVLS  = ['','L1 Junior','L2 Mid','L3 Senior','L4 Staff','L5 Principal'];
+
+// ── UTILS ──
+const rh  = n => { let s='0x'; for(let i=0;i<n;i++) s+='0123456789abcdef'[Math.floor(Math.random()*16)]; return s; }
+const sa  = a => a?a.slice(0,6)+'...'+a.slice(-4):a;
+const now = () => new Date().toLocaleTimeString('en-US',{hour12:false});
+const usd = n => '$'+Number(n).toLocaleString();
+const slp = ms => new Promise(r=>setTimeout(r,ms));
+
+function notify(t,b,bad=false) {
+  const el=document.getElementById('notif');
+  el.style.borderLeftColor = bad?'#ff3333':'#000';
+  el.style.background = bad?'#ff3333':'var(--y)';
+  el.style.color = bad?'#fff':'var(--bg)';
+  document.getElementById('ntt').textContent=t;
+  document.getElementById('ntb').textContent=b;
+  el.classList.add('on');
+  setTimeout(()=>el.classList.remove('on'),3800);
+}
+
+function addLog(id,cls,msg) {
+  const c=document.getElementById(id); if(!c)return;
+  const blk=c.querySelector('.blink');
+  const s=document.createElement('span');
+  s.className='ll';
+  s.innerHTML=`<span class="lt">[${now()}]</span> <span class="${cls}">${msg}</span>`;
+  blk?c.insertBefore(s,blk.parentElement||blk):c.appendChild(s);
+  c.scrollTop=c.scrollHeight;
+}
+
+// ── HEX BG ──
+function initHF() {
+  const b=document.getElementById('hf'); if(!b)return;
+  for(let i=0;i<28;i++){
+    const d=document.createElement('div');
+    d.className='hc';
+    d.style.left=Math.random()*100+'%';
+    d.style.animationDelay=Math.random()*9+'s';
+    d.style.animationDuration=(7+Math.random()*7)+'s';
+    let t=''; for(let j=0;j<4;j++)t+='0123456789abcdef'[Math.floor(Math.random()*16)];
+    d.textContent=t; b.appendChild(d);
+  }
+}
+
+// ── TABS ──
+function go(id,btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  else {
+    document.querySelectorAll('.tab').forEach(t=>{
+      if(t.textContent.toLowerCase().includes(id)) t.classList.add('active');
+    });
+  }
+}
+
+// ── WALLET ──
+function connectWallet() {
+  const b=document.getElementById('connectBtn');
+  b.textContent='Connecting...'; b.disabled=true;
+  setTimeout(()=>{
+    const a='0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+    b.textContent=sa(a); b.disabled=false;
+    addLog('fhelog','li','Wallet connected: '+sa(a));
+    addLog('fhelog','lf','fhevm-js: keypair generated for FHE inputs');
+    notify('Wallet Connected',sa(a));
+  },1100);
+}
+
+// ── ENC PREVIEW ──
+function encPreview() {
+  const v=document.getElementById('eSal').value;
+  const box=document.getElementById('encBox');
+  if(!v||v<100){box.style.display='none';return;}
+  box.style.display='block';
+  document.getElementById('ep1').textContent=usd(v)+'/mo';
+  document.getElementById('ep2').textContent=rh(128);
+}
+
+// ── ADD EMP ──
+function addEmp() {
+  const addr=document.getElementById('eAddr').value||'0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  const sal=parseFloat(document.getElementById('eSal').value);
+  const dept=+document.getElementById('eDept').value;
+  const lvl=+document.getElementById('eLvl').value;
+  const name=document.getElementById('eName').value||'Employee '+(S.emps.length+1);
+  const gender=+document.getElementById('eGender').value;
+  if(!sal||sal<100){notify('Error','Enter a valid salary',true);return;}
+  openGW('Encrypting Salary','fhevm-js encrypts salary client-side before broadcasting to fhEVM.');
+  addGWLog('lf',`TFHE.asEuint64(${usd(sal)}) → ${rh(32)}`);
+  setTimeout(()=>addGWLog('lx','Sending tx to coprocessor...'),700);
+  setTimeout(()=>addGWLog('li','TFHE.allow(salary, employee) ✓'),1400);
+  setTimeout(()=>addGWLog('li','TFHE.allow(salary, contract) ✓'),1900);
+  setTimeout(()=>{
+    closeGW();
+    S.emps.push({id:Date.now()+Math.random(),addr,name,sal,dept,lvl,gender,active:true,enc:rh(32),paid:null});
+    renderEmps(); refreshSels();
+    document.getElementById('sv1').textContent=S.emps.filter(e=>e.active).length;
+    document.getElementById('ec').textContent=S.emps.length;
+    addLog('fhelog','li','Employee registered: '+name);
+    addLog('fhelog','lf','euint64 handle: '+rh(32));
+    notify('Employee Added',name+' registered with encrypted salary');
+    document.getElementById('eAddr').value='';
+    document.getElementById('eSal').value='';
+    document.getElementById('eName').value='';
+    document.getElementById('encBox').style.display='none';
+  },2600);
+}
+
+// ── DEMO ──
+const DEMO=[
+  {name:'Alice Chen',sal:9500,dept:1,lvl:3,gender:2},
+  {name:'Bob Martinez',sal:7200,dept:2,lvl:2,gender:1},
+  {name:'Carol Johnson',sal:11000,dept:3,lvl:4,gender:2},
+  {name:'David Kim',sal:15000,dept:1,lvl:5,gender:1},
+  {name:'Eve Wilson',sal:8800,dept:5,lvl:3,gender:2},
+];
+function loadDemo() {
+  S.emps=[];
+  DEMO.forEach(d=>S.emps.push({id:Date.now()+Math.random(),addr:'0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join(''),name:d.name,sal:d.sal,dept:d.dept,lvl:d.lvl,gender:d.gender,active:true,enc:rh(32),paid:null}));
+  renderEmps(); refreshSels();
+  document.getElementById('sv1').textContent=S.emps.length;
+  document.getElementById('ec').textContent=S.emps.length;
+  DEMO.forEach(d=>addLog('fhelog','lf',d.name+': salary encrypted → euint64'));
+  notify('Demo Loaded','5 employees with encrypted salaries');
+}
+
+function renderEmps() {
+  const tb=document.getElementById('etbl');
+  if(!S.emps.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px;font-size:10px">No employees — add one or load demo data</td></tr>';return;}
+  tb.innerHTML=S.emps.map(e=>`<tr>
+    <td>${e.name}</td>
+    <td class="enc-cell">${sa(e.addr)}</td>
+    <td>${DEPTS[e.dept]}</td>
+    <td>${LVLS[e.lvl]}</td>
+    <td><span class="enc-cell">████████ <span class="tac xs">euint64</span></span></td>
+    <td>${e.paid?new Date(e.paid).toLocaleDateString():'<span class="tm">—</span>'}</td>
+    <td><span class="badge ${e.active?'badge-on':'badge-off'}">${e.active?'active':'inactive'}</span></td>
+    <td><button class="btn btn-red btn-sm" onclick="rmEmp(${e.id})">Remove</button></td>
+  </tr>`).join('');
+}
+
+function rmEmp(id) {
+  const e=S.emps.find(x=>x.id===id);
+  if(e){e.active=false;renderEmps();document.getElementById('sv1').textContent=S.emps.filter(x=>x.active).length;notify('Removed',e.name);}
+}
+
+function refreshSels() {
+  const opts=S.emps.filter(e=>e.active).map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  ['psEmp','eqEmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Select...</option>'+opts;});
+}
+
+// ── PAYROLL ──
+let running=false;
+async function runPayroll(){
+  if(running)return;
+  const active=S.emps.filter(e=>e.active);
+  if(!active.length){notify('No Employees','Add employees first',true);return;}
+  running=true;
+  const rb=document.getElementById('runBtn');
+  rb.disabled=true; rb.textContent='Running...';
+
+  const L=(cls,msg)=>addLog('paylog',cls,msg);
+  const sset=(n,st)=>{const el=document.getElementById('s'+n+'n');el.className='snum '+st;if(st==='done')el.textContent='✓';};
+
+  document.getElementById('paylog').innerHTML='<span class="ll"><span class="blink">█</span></span>';
+
+  const rid=S.runs.length+1;
+  const bs=+document.getElementById('bsz').value;
+
+  sset(1,'run');
+  L('li',`initPayrollRun() — Run ID #${rid}`);
+  await slp(700);
+  L('lf','TFHE.asEuint64(0) → totalGrossPay init');
+  L('lf','TFHE.asEuint64(0) → totalNetPay init');
+  const tx1=rh(32);
+  document.getElementById('s1tx').textContent='tx: '+tx1;
+  L('lx','tx: '+tx1);
+  await slp(500);
+  sset(1,'done');
+
+  sset(2,'run');
+  document.getElementById('s2p').style.display='block';
+  for(let i=0;i<active.length;i+=bs){
+    const chunk=active.slice(i,i+bs);
+    L('li',`batchRunPayroll(${rid}, ${i}, ${i+chunk.length})`);
+    for(const e of chunk){
+      L('lf',`${e.name}: TFHE.add(salary, bonus) → grossPay`);
+      await slp(160);
+      L('lf',`${e.name}: _calculateTax(gross) — branchless FHE`);
+      await slp(160);
+      L('lf',`${e.name}: TFHE.sub(gross, deduct) → netPay`);
+      await slp(160);
+      L('li',`${e.name}: payToken.mint(addr, netPay) ✓`);
+      e.paid=new Date().toISOString();
+      await slp(100);
+    }
+    const bt=rh(32);
+    L('lx','batch tx: '+bt);
+    document.getElementById('s2tx').textContent='last tx: '+bt;
+    document.getElementById('s2b').style.width=(Math.min((i+chunk.length)/active.length,1)*100)+'%';
+    await slp(250);
+  }
+  sset(2,'done');
+
+  sset(3,'run');
+  L('li',`finalizePayrollRun(${rid})`);
+  await slp(800);
+  const ah=rh(32);
+  L('li','auditHash: '+ah);
+  L('ld','All amounts remain encrypted — no plaintext leakage');
+  document.getElementById('s3tx').textContent='audit: '+ah;
+  await slp(400);
+  sset(3,'done');
+
+  S.runs.push({id:rid,date:new Date().toISOString(),cnt:active.length,hash:ah});
+  renderRuns();
+  renderEmps();
+  document.getElementById('sv2').textContent=S.runs.length;
+  document.getElementById('runHist').style.display='block';
+  L('li',`✓ Run #${rid} complete — ${active.length} employees`);
+
+  setTimeout(()=>{
+    ['1','2','3'].forEach(n=>{const el=document.getElementById('s'+n+'n');el.className='snum pend';el.textContent=n;if(document.getElementById('s'+n+'tx'))document.getElementById('s'+n+'tx').textContent='';});
+    document.getElementById('s2p').style.display='none';
+    document.getElementById('s2b').style.width='0';
+    rb.disabled=false; rb.textContent='Execute Payroll Run →';
+    running=false;
+  },2500);
+
+  notify('Payroll Complete',`Run #${rid} — ${active.length} employees`);
+}
+
+function renderRuns(){
+  const tb=document.getElementById('rtbl');
+  tb.innerHTML=S.runs.map(r=>`<tr>
+    <td class="tac fw7">#${r.id}</td>
+    <td>${new Date(r.date).toLocaleDateString()}</td>
+    <td>${r.cnt}</td>
+    <td><span class="enc-cell">████████ <span class="tac xs">euint64</span></span></td>
+    <td><span class="enc-cell">████████ <span class="tac xs">euint64</span></span></td>
+    <td class="enc-cell xs">${r.hash.slice(0,16)}...</td>
+    <td><span class="badge badge-on">Finalized</span></td>
+  </tr>`).join('');
+}
+
+// ── PAYSLIPS ──
+function updPrf(){document.getElementById('rfields').style.display=document.getElementById('psPrf').value==='EMPLOYMENT_ONLY'?'none':'block';}
+function updRange(){
+  const mn=+document.getElementById('rmin').value,mx=+document.getElementById('rmax').value;
+  document.getElementById('rl1').textContent='Min: $'+mn.toLocaleString();
+  document.getElementById('rl2').textContent='Max: $'+mx.toLocaleString();
+}
+
+async function reqPS(){
+  const eid=document.getElementById('psEmp').value;
+  const emp=S.emps.find(e=>e.id==eid);
+  if(!emp){notify('Select Employee','Choose an employee first',true);return;}
+  const ver=document.getElementById('psVer').value||'0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  const purp=document.getElementById('psPurp').value;
+  const prf=document.getElementById('psPrf').value;
+  const mn=+document.getElementById('rmin').value;
+  const mx=+document.getElementById('rmax').value;
+  const ttl=document.getElementById('psTitle').value||DEPTS[emp.dept]+' Employee';
+
+  openGW('Confidential Payslip','FHE range proof on encrypted salary. Only the boolean is decrypted by Gateway.');
+  addGWLog('lf',`_computeProof(${prf}, encSalary, ${mn}, ${mx})`);
+  await slp(700);
+  let res;
+  if(prf==='EMPLOYMENT_ONLY'){addGWLog('lf','TFHE.gt(salary, 0) → ebool');res=true;}
+  else if(prf==='THRESHOLD_PROOF'){addGWLog('lf',`TFHE.ge(salary, ${mx}) → ebool`);res=emp.sal>=mx;}
+  else{addGWLog('lf',`TFHE.ge(salary,${mn}) AND TFHE.le(salary,${mx}) → ebool`);res=emp.sal>=mn&&emp.sal<=mx;}
+  await slp(900);
+  addGWLog('lx','Gateway.requestDecryption([ebool]) sent');
+  await slp(1000);
+  addGWLog('li','Gateway callback: result = '+res);
+  await slp(600);
+  addGWLog('li','Soulbound NFT minted ✓');
+  await slp(400);
+  closeGW();
+
+  const tid=S.pss.length+1;
+  S.pss.push({tid,emp:emp.name,ver:sa(ver),purp,prf,mn,mx,res,ttl,dt:new Date().toISOString()});
+
+  document.getElementById('psPrev').innerHTML=`
+    <div class="ps-logo">🔐 CONFIDENTIAL PAYROLL</div>
+    <div class="ps-row"><span class="ps-k">Token ID</span><span class="ps-v">#${tid}</span></div>
+    <div class="ps-row"><span class="ps-k">Employee</span><span class="ps-v">${emp.name}</span></div>
+    <div class="ps-row"><span class="ps-k">Position</span><span class="ps-v">${ttl}</span></div>
+    <div class="ps-row"><span class="ps-k">Employer</span><span class="ps-v">ConfidentialCorp Inc.</span></div>
+    <div class="ps-row"><span class="ps-k">Verifier</span><span class="ps-v">${sa(ver)}</span></div>
+    <div class="ps-row"><span class="ps-k">Purpose</span><span class="ps-v">${purp.replace(/_/g,' ')}</span></div>
+    <div class="ps-row"><span class="ps-k">Exact Salary</span><span class="ps-v enc">██████████ (euint64 · never revealed)</span></div>
+    <div class="ps-row"><span class="ps-k">Range Asserted</span><span class="ps-v">${prf==='EMPLOYMENT_ONLY'?'Employed ✓':'$'+mn.toLocaleString()+' – $'+mx.toLocaleString()+'/mo'}</span></div>
+    <div class="ps-row"><span class="ps-k">Proof Result</span><span class="ps-v ${res?'ok':'fail'}">${res?'✓ VERIFIED':'✗ NOT MET'}</span></div>
+    <div class="ps-row"><span class="ps-k">Issued</span><span class="ps-v">${new Date().toLocaleDateString()}</span></div>
+    <div class="ps-seal">🔒 SOULBOUND · NON-TRANSFERABLE · ONLY ${sa(ver).toUpperCase()} CAN READ THIS</div>`;
+
+  document.getElementById('sv3').textContent=S.pss.length;
+  document.getElementById('psc').textContent=S.pss.length;
+  document.getElementById('psListWrap').style.display='block';
+  document.getElementById('psList').innerHTML=S.pss.map(p=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:10px">
+      <div><span class="tac fw7">#${p.tid}</span><span class="td" style="margin-left:8px">${p.emp}</span></div>
+      <div style="text-align:right">
+        <div class="xs tm">${p.purp.replace(/_/g,' ')}</div>
+        <div class="${p.res?'tac':'tr'} fw7 xs">${p.res?'✓ Verified':'✗ Not Met'}</div>
+      </div>
+    </div>`).join('');
+
+  notify('Payslip Issued',`#${tid} — ${res?'Proof verified ✓':'Condition not met'}`);
+}
+
+// ── EQUITY ──
+function selClaim(n){
+  S.claim=n;
+  document.querySelectorAll('.claim').forEach((c,i)=>c.classList.toggle('sel',i===n));
+}
+const CLAIMS=['ABOVE_MINIMUM_WAGE','WITHIN_SALARY_BAND','ABOVE_DEPARTMENT_MEDIAN'];
+
+async function reqCert(){
+  const eid=document.getElementById('eqEmp').value;
+  const emp=S.emps.find(e=>e.id==eid);
+  if(!emp){notify('Select Employee','Choose an employee first',true);return;}
+  const ct=CLAIMS[S.claim];
+
+  openGW('Equity Certificate','FHE comparison on encrypted salary. Only the boolean result is decrypted.');
+  addGWLog('lf',`_evaluateClaim(${ct}, encSalary)`);
+  await slp(600);
+  let res;
+  if(ct==='ABOVE_MINIMUM_WAGE'){addGWLog('lf','TFHE.gt(salary, encMinWage) → ebool');res=true;}
+  else if(ct==='WITHIN_SALARY_BAND'){addGWLog('lf','TFHE.and(TFHE.ge(s,min),TFHE.le(s,max)) → ebool');res=emp.sal<15000;}
+  else{addGWLog('lf','TFHE.gt(salary, deptMedian[dept]) → ebool');res=Math.random()>.35;}
+  await slp(900);
+  addGWLog('lx','Gateway.requestDecryption([ebool]) sent');
+  await slp(1100);
+  addGWLog('li','Gateway callback: '+res+' — certificate issuing');
+  await slp(500);
+  closeGW();
+
+  S.certs.push({id:S.certs.length+1,name:emp.name,ct,res,dt:new Date().toISOString()});
+  document.getElementById('certCnt').textContent=S.certs.length+' cert'+(S.certs.length>1?'s':'');
+  document.getElementById('certList').innerHTML=S.certs.map(c=>`
+    <div class="cert">
+      <div class="cert-head">
+        <span class="cert-name">${c.name}</span>
+        <span class="${c.res?'cert-ok':'cert-fail'}">${c.res?'✓ CERTIFIED':'✗ FAILED'}</span>
+      </div>
+      <div class="cert-sub">${c.ct} · Cert #${c.id} · ${new Date(c.dt).toLocaleDateString()}</div>
+    </div>`).join('');
+
+  notify('Certificate Issued',`${ct} — ${res?'Certified ✓':'Failed ✗'}`);
+}
+
+// ── GATEWAY ──
+function openGW(t,b){
+  document.getElementById('gwTitle').textContent=t;
+  document.getElementById('gwBody').textContent=b;
+  document.getElementById('gwLog').innerHTML='';
+  document.getElementById('gw').classList.add('open');
+}
+function closeGW(){ document.getElementById('gw').classList.remove('open'); }
+function addGWLog(cls,msg){
+  const c=document.getElementById('gwLog');
+  const s=document.createElement('span');s.className='ll';
+  s.innerHTML=`<span class="lt">[${now()}]</span> <span class="${cls}">${msg}</span>`;
+  c.appendChild(s); c.scrollTop=c.scrollHeight;
+}
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded',()=>{
+  initHF(); updRange();
+  setInterval(()=>{
+    const msgs=[['lf','TFHE coprocessor: heartbeat ✓'],['ld','Block: '+(7000000+Math.floor(Date.now()/12000))],['lf','ACL: access list synced']];
+    if(Math.random()>.6){const[c,m]=msgs[Math.floor(Math.random()*msgs.length)];addLog('fhelog',c,m);}
+  },5500);
+});
+</script>
 </body>
 </html>
