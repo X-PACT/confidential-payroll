@@ -9,6 +9,7 @@
     "coverage": "hardhat coverage",
     "deploy:zama": "hardhat run scripts/deploy.js --network zama-sepolia",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:vercel": "npx vercel --prod",
     "add-employees": "hardhat run scripts/addEmployees.js --network zama-sepolia",
     "run-payroll": "hardhat run scripts/runPayroll.js --network zama-sepolia",
     "request-payslip": "hardhat run scripts/requestPayslip.js --network zama-sepolia",

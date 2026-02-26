@@ -81,6 +81,9 @@ npm run request-payslip
 - Interactive demo page: [`frontend/demo.html`](./frontend/demo.html)
 - Live frontend URL: `https://x-pact.github.io/confidential-payroll/`
 - GitHub Pages entry file: [`index.html`](./index.html)
+- Vercel configuration: [`vercel.json`](./vercel.json)
+- One-command Vercel deploy: `npm run deploy:vercel`
+- Launch, listing, and acquisition copy: [`LAUNCH_KIT.md`](./LAUNCH_KIT.md)
 - Repository link: `https://github.com/X-PACT/confidential-payroll/blob/master/frontend/demo.html`
 - Local preview:
 
@@ -248,6 +251,18 @@ payslip.requestPayslip(
 - **Access Control:** OpenZeppelin v5
 - **Frontend:** fhevm-js
 - **Network:** Zama Sepolia (chainId: 11155111)
+
+---
+
+## 🚀 Launch Kit
+
+- Vercel-ready static deployment config is included in [`vercel.json`](./vercel.json)
+- Multi-platform launch copy is included in [`LAUNCH_KIT.md`](./LAUNCH_KIT.md)
+- Recommended launch order:
+  1. GitHub Pages or Vercel production demo
+  2. DoraHacks project page
+  3. Product Hunt launch
+  4. Strategic buyer outreach or acquisition marketplace listing
 
 ---
 
