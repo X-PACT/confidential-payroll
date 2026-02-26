@@ -13,7 +13,7 @@
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
-> **Built for Zama Developer Program** | Production-ready confidential payroll using fhEVM + ERC-7984 + ERC-5192
+> Built for the Zama Developer Program using fhEVM + ERC-7984 + ERC-5192
 
 **Problem:** Traditional payroll systems expose sensitive salary data, creating privacy risks and compliance challenges. Blockchain payroll makes it worse — everything is public.
 
@@ -23,18 +23,16 @@
 
 ## 🎯 Key Innovation
 
-**World's First Truly Confidential On-Chain Payroll System:**
+What this project demonstrates in practice:
 
-✅ **Employers** process payroll without seeing individual salaries  
-✅ **Employees** verify payments and get verifiable payslips without revealing amounts  
-✅ **Auditors** verify compliance without accessing any sensitive data  
-✅ **Regulators** receive pay equity certificates without seeing individual salaries  
-✅ **Tax calculations** happen entirely on encrypted data — fully branchless FHE  
-✅ **Progressive tax** computed with TFHE.min() + TFHE.select() + TFHE.shr() (no TFHE.decrypt in loops)  
-✅ **ERC-7984 salary token** minted as actual transferable on-chain payment  
-✅ **ERC-5192 soulbound payslips** for real-world financial verification (loans, visas, rentals)  
+- Employers can run payroll without seeing individual salaries.
+- Employees can verify payments and request verifiable payslips without disclosing exact amounts.
+- Auditors and regulators can verify compliance through encrypted proofs.
+- Tax is computed with branchless FHE logic using `TFHE.min()`, `TFHE.select()`, and `TFHE.shr()`.
+- Salaries are paid on-chain through an ERC-7984 confidential token.
+- Payslips are issued as ERC-5192 soulbound attestations for real-world checks.
 
-**Nobody sees plaintext salary amounts except the employee themselves.**
+Plaintext salary remains visible only to the employee.
 
 ---
 
@@ -82,7 +80,7 @@ npm run request-payslip
 
 - Interactive demo page: [`frontend/demo.html`](./frontend/demo.html)
 - Live frontend URL: `https://x-pact.github.io/confidential-payroll/`
-- GitHub Pages source file: [`docs/index.html`](./docs/index.html)
+- GitHub Pages entry file: [`index.html`](./index.html)
 - Repository link: `https://github.com/X-PACT/confidential-payroll/blob/master/frontend/demo.html`
 - Local preview:
 
