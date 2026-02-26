@@ -1,5 +1,18 @@
 # 🔐 ConfidentialPayroll v2 — Privacy-Preserving Payroll on Zama fhEVM
 
+<p align="center">
+  <a href="https://x-pact.github.io/confidential-payroll/" target="_blank">
+    <img src="https://img.shields.io/badge/LIVE_FRONTEND-OPEN_DEMO-00d4ff?style=for-the-badge&logo=githubpages&logoColor=white" alt="Live Frontend Demo">
+  </a>
+</p>
+
+```text
+┌────────────────────────── LIVE FRONTEND SCREEN ──────────────────────────┐
+│ STATUS: ONLINE (GitHub Pages)                                            │
+│ URL:    https://x-pact.github.io/confidential-payroll/                   │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
 > **Built for Zama Developer Program** | Production-ready confidential payroll using fhEVM + ERC-7984 + ERC-5192
 
 **Problem:** Traditional payroll systems expose sensitive salary data, creating privacy risks and compliance challenges. Blockchain payroll makes it worse — everything is public.
@@ -68,6 +81,8 @@ npm run request-payslip
 ## 🎥 Demo Page
 
 - Interactive demo page: [`frontend/demo.html`](./frontend/demo.html)
+- Live frontend URL: `https://x-pact.github.io/confidential-payroll/`
+- GitHub Pages source file: [`docs/index.html`](./docs/index.html)
 - Repository link: `https://github.com/X-PACT/confidential-payroll/blob/master/frontend/demo.html`
 - Local preview:
 
