@@ -1,15 +1,18 @@
 # 🔐 ConfidentialPayroll v2 — Privacy-Preserving Payroll on Zama fhEVM
 
 <p align="center">
+  <a href="https://confidential-payroll-henna.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/LIVE_DEMO-VERCEL-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Live Demo">
+  </a>
   <a href="https://x-pact.github.io/confidential-payroll/" target="_blank">
-    <img src="https://img.shields.io/badge/LIVE_FRONTEND-OPEN_DEMO-00d4ff?style=for-the-badge&logo=githubpages&logoColor=white" alt="Live Frontend Demo">
+    <img src="https://img.shields.io/badge/FALLBACK-GITHUB_PAGES-24292f?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Pages Fallback">
   </a>
 </p>
 
 ```text
 ┌────────────────────────── LIVE FRONTEND SCREEN ──────────────────────────┐
-│ STATUS: ONLINE (GitHub Pages)                                            │
-│ URL:    https://x-pact.github.io/confidential-payroll/                   │
+│ STATUS: ONLINE (Vercel primary / GitHub Pages fallback)                  │
+│ URL:    https://confidential-payroll-henna.vercel.app/                   │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -79,9 +82,12 @@ npm run request-payslip
 ## 🎥 Demo Page
 
 - Interactive demo page: [`frontend/demo.html`](./frontend/demo.html)
-- Live frontend URL: `https://x-pact.github.io/confidential-payroll/`
-- GitHub Pages entry file: [`index.html`](./index.html)
+- Primary live frontend URL: `https://confidential-payroll-henna.vercel.app/`
+- Fallback frontend URL: `https://x-pact.github.io/confidential-payroll/`
+- Production entry file: [`index.html`](./index.html)
+- GitHub Pages marker: [`.nojekyll`](/home/x-pact/confidential-payroll/.nojekyll)
 - Vercel configuration: [`vercel.json`](./vercel.json)
+- Sync source demo into production entry: `npm run sync:demo`
 - One-command Vercel deploy: `npm run deploy:vercel`
 - Launch, listing, and acquisition copy: [`LAUNCH_KIT.md`](./LAUNCH_KIT.md)
 - Repository link: `https://github.com/X-PACT/confidential-payroll/blob/master/frontend/demo.html`
@@ -258,6 +264,7 @@ payslip.requestPayslip(
 
 - Vercel-ready static deployment config is included in [`vercel.json`](./vercel.json)
 - Multi-platform launch copy is included in [`LAUNCH_KIT.md`](./LAUNCH_KIT.md)
+- Production hosting is standardized on the repository root
 - Recommended launch order:
   1. GitHub Pages or Vercel production demo
   2. DoraHacks project page

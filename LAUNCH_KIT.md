@@ -29,10 +29,9 @@ Recommended aliases after the first deployment:
 
 ### GitHub Pages
 
-Use either of these and keep only one active in repository settings:
+Use only this repository setting:
 
 - `master` + `/ (root)`
-- `master` + `/docs`
 
 ## DoraHacks Submission Copy
 
@@ -75,8 +74,8 @@ This is not a concept mockup. The repository includes contracts, scripts, local 
 ### Links
 
 - Repository: `https://github.com/X-PACT/confidential-payroll`
-- GitHub Pages demo: `https://x-pact.github.io/confidential-payroll/`
-- Add Vercel production URL after deployment
+- Vercel demo: `https://confidential-payroll-henna.vercel.app/`
+- GitHub Pages fallback: `https://x-pact.github.io/confidential-payroll/`
 
 ### Suggested Track Tags
 

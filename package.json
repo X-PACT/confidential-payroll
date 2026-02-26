@@ -7,6 +7,7 @@
     "test": "hardhat test",
     "test:payslip": "hardhat test test/ConfidentialPayslip.test.js",
     "coverage": "hardhat coverage",
+    "sync:demo": "cp frontend/demo.html index.html",
     "deploy:zama": "hardhat run scripts/deploy.js --network zama-sepolia",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:vercel": "npx vercel --prod",
