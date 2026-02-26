@@ -127,13 +127,14 @@ contract ConfidentialEquityOracle is AccessControl, ReentrancyGuard, GatewayCall
     // Constructor
     // =========================================================================
 
-    constructor(address _payrollContract) {
+    constructor(address _payrollContract, address _admin) {
         require(_payrollContract != address(0), "Equity: zero address");
+        require(_admin != address(0), "Equity: zero admin");
         payrollContract = _payrollContract;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(HR_ROLE, msg.sender);
-        _grantRole(REGULATOR_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(HR_ROLE, _admin);
+        _grantRole(REGULATOR_ROLE, _admin);
 
         // NOTE: encryptedMinimumWage stays uninitialized (euint64 zero-equivalent).
         // Removed TFHE.asEuint64(0) from constructor — TFHE ops at deploy time

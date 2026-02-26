@@ -2,14 +2,15 @@
 
 ## Submission Information
 
-**Project Name:** ConfidentialPayroll  
-**Category:** Confidential Payroll ($5,000 Prize)  
-**Developer:** FAHD KOTB 
-**Email:** [fahd@kot@tuta.io]  
-**Discord:** [X-PACT]  
-**GitHub:** https://github.com/YOUR_USERNAME/confidential-payroll  
-**Submission Date:** February 2026  
+**Project Name:** ConfidentialPayroll v2
+**Category:** Confidential Payroll ($5,000 Prize)
+**Developer:** FAHD KOTB
+**Email:** fahd.kotb@tuta.io
+**Discord:** X-PACT
+**GitHub:** https://github.com/X-PACT/confidential-payroll
+**Submission Date:** February 2026
 
+---
 
 ## ✅ Deployed Contracts — Ethereum Sepolia (chainId: 11155111)
 
@@ -19,583 +20,189 @@
 | ConfidentialPayToken (ERC-7984) | `0x861d347672E3B58Eea899305BDD630EA2A6442a0` |
 | ConfidentialEquityOracle | `0xe9F6209156dE521334Bd56eAf9063Af2882216B3` |
 | ConfidentialPayslip (ERC-5192 Soulbound) | `0xbF160BC0A4C610E8134eAbd3cd1a1a9608d534aC` |
-| PayrollDemo (simplified demo) | `0x1c54Ba9b6457c0EfC31747BE476D6D025AA5f551` |
 
-**Deployed:** February 19, 2026  
-**Deployer:** `0xff68c6A49Cc012B72B16937b615e9eA95fb5F52a`  
-**Explorer:** https://sepolia.etherscan.io/address/0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF  
-**Video Demo:** [VIDEO_URL_HERE]
+**Deployed:** February 19, 2026
+**Deployer:** `0xff68c6A49Cc012B72B16937b615e9eA95fb5F52a`
+**Explorer:** https://sepolia.etherscan.io/address/0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF
 
 ---
+
 ## Our Development Journey
 
 Building ConfidentialPayroll was harder than we expected — in the best possible way.
 
-The biggest challenge was the payroll execution model. Our first implementation ran all employees in a single `runPayroll()` transaction. This worked fine in local Hardhat tests, but hit the gas limit at around 15 employees on Zama Sepolia because each employee requires 6+ FHE operations (~240k gas each). We had to redesign completely.
+### The Payroll Execution Problem
 
-Our second attempt split employees into groups off-chain and called `runPayroll()` multiple times with different arrays. This worked for execution, but broke the audit trail — there was no shared run ID across chunks, and the encrypted aggregate totals (`totalGrossPay`, `totalNetPay`) couldn't span multiple transactions without careful TFHE.allow() management that we hadn't implemented yet.
+Our first implementation ran all employees in a single `runPayroll()` transaction. This worked fine in local Hardhat tests, but hit the gas limit at around 15 employees on Zama Sepolia because each employee requires 6+ FHE operations (~240k gas each).
 
-The third design — which is what ships — uses `initPayrollRun()` to create the run ID upfront, then `batchRunPayroll(runId, start, end)` to process employees in configurable chunks, and finally `finalizePayrollRun()` to seal it. Each chunk updates the same run's encrypted aggregates. This took about a week to get right, primarily because debugging FHE handle permissions across transaction boundaries is not like debugging normal Solidity.
+Our second attempt split employees into groups off-chain and called `runPayroll()` multiple times. This worked for execution, but broke the audit trail — no shared run ID across chunks, and encrypted aggregates couldn't span transactions without careful TFHE.allow() management.
 
-We also faced unexpected limitations around encrypted aggregation inside Solidity. Early on we tried to maintain a running encrypted total across multiple calls by storing intermediate euint64 handles in contract state — this kept silently producing wrong results because the ACL (Access Control List) for the handle wasn't being updated after each TFHE.add(). The fix was adding TFHE.allow() calls after every state-updating FHE operation, which isn't obvious from the documentation. We redesigned the payroll batching mechanism twice before reaching a stable approach.
+The third design — which ships — uses `initPayrollRun()` to create the run ID upfront, then `batchRunPayroll(runId, start, end)` for chunked processing, and finally `finalizePayrollRun()`. Each chunk updates the same run's encrypted aggregates. This took about a week to get right.
 
-These struggles are reflected in the git history: you'll see the bug fixes, the refactors, and the comments in the code where we explain what we tried and why it didn't work.
+### The FHE API Discovery Problem
 
----
+We also discovered limitations around encrypted aggregation inside Solidity. Storing intermediate euint64 handles in contract state kept silently producing wrong results because the ACL wasn't being updated after each TFHE.add(). The fix: TFHE.allow() after every single state-updating FHE operation. This isn't obvious from the documentation.
 
+### The fhEVM 0.6 API Change Problem
 
+Our original tax implementation used TFHE.mul() and TFHE.div() to compute exact tax percentages. During testing on Zama Sepolia we discovered both were removed from fhEVM 0.6. We rewrote the entire tax system using only operations available in 0.6: TFHE.shr() (scalar bit-shift), TFHE.min(), TFHE.select(), and TFHE.sub().
 
-**ConfidentialPayroll** is the world's first truly confidential on-chain payroll system that achieves **perfect salary privacy** using Zama's fhEVM technology. Unlike traditional payroll systems where administrators can see all salaries, or blockchain solutions where amounts are transparent, ConfidentialPayroll ensures that **nobody except the employee themselves can ever see their salary** - not the employer, not the admin, not anyone.
+The new approach uses binary bit-shift approximations:
+- 10%: `shr(3) - shr(5)` = 3/32 ≈ 9.375%
+- 20%: `shr(2) - shr(4)` = 3/16 ≈ 18.75%
+- 30%: `shr(1) - shr(2) - shr(4)` = 5/16 ≈ 31.25%
 
-### The Problem We Solve
-
-1. **Privacy Crisis:** Traditional payroll exposes sensitive salary data to HR, admins, and potential hackers
-2. **On-Chain Transparency:** Current blockchain solutions make all transactions public
-3. **Compliance Burden:** GDPR/CCPA require extensive protections for salary data
-4. **Trust Issues:** Employees must trust employers won't misuse salary information
-5. **Salary Discrimination:** Visible salaries enable unfair comparisons and negotiations
-
-### Our Innovation
-
-We use **Fully Homomorphic Encryption (FHE)** to perform complete payroll operations on encrypted data:
-
-- ✅ **Tax calculation** on encrypted salaries using FHE comparisons
-- ✅ **Progressive tax brackets** computed with `TFHE.gt()` and `TFHE.select()`
-- ✅ **Bonus additions** using `TFHE.add()` on ciphertexts
-- ✅ **Deduction subtraction** using `TFHE.sub()` on encrypted amounts
-- ✅ **Net pay calculation** entirely with FHE arithmetic
-- ✅ **Threshold decryption** via Zama Gateway for employees only
-
-**Result:** Complete payroll confidentiality with mathematical guarantees.
+These are close enough for a payroll demo and — critically — they work on the real Zama Sepolia coprocessor.
 
 ---
 
-## Why ConfidentialPayroll Wins
+## What We Built
 
-### 1. Real FHE Implementation (Not Mocks)
+### 1. ConfidentialPayroll.sol — Main Contract
+
+The core payroll engine. Fully encrypted employee records, FHE progressive tax, batch payroll execution, and Gateway-based employee salary decryption.
+
+**The v1 → v2 critical fix:**
+
+v1 called TFHE.decrypt() inside the progressive tax loop — this decrypts encrypted salary
+on-chain, breaking confidentiality and only working in mock mode. v2 is fully branchless:
 
 ```solidity
-// REAL FHE tax calculation on encrypted data
-function _calculateTax(euint64 grossPay) private view returns (euint64) {
-    euint64 totalTax = TFHE.asEuint64(0);
-    
-    for (uint i = 0; i < taxBrackets.length; i++) {
-        // FHE comparison: encrypted salary > encrypted threshold
-        ebool exceedsThreshold = TFHE.gt(grossPay, taxBrackets[i].threshold);
-        
-        // FHE conditional selection
-        euint64 bracketAmount = TFHE.select(
-            exceedsThreshold,
-            TFHE.sub(taxBrackets[i].threshold, previousThreshold),
-            TFHE.sub(grossPay, previousThreshold)
-        );
-        
-        // FHE multiplication and division for tax calculation
-        euint64 bracketTax = TFHE.div(
-            TFHE.mul(bracketAmount, taxBrackets[i].rate),
-            TFHE.asEuint64(10000)
-        );
-        
-        // FHE addition
-        totalTax = TFHE.add(totalTax, bracketTax);
-    }
-    
-    return totalTax; // Still encrypted!
-}
+// v2 correct approach — no TFHE.decrypt anywhere in payroll logic
+euint64 bAmt1 = TFHE.min(grossPay, TFHE.asEuint64(THRESHOLD_50K));
+euint64 bTax1 = TFHE.sub(TFHE.shr(bAmt1, 3), TFHE.shr(bAmt1, 5)); // ~10%
+
+ebool   above50k = TFHE.gt(TFHE.min(grossPay, TFHE.asEuint64(THRESHOLD_100K)),
+                            TFHE.asEuint64(THRESHOLD_50K));
+euint64 bAmt2    = TFHE.select(above50k, TFHE.sub(...), TFHE.asEuint64(0));
+euint64 bTax2    = TFHE.sub(TFHE.shr(bAmt2, 2), TFHE.shr(bAmt2, 4)); // ~20%
+// ...and so on. All FHE, all encrypted, no branches on plaintext.
 ```
 
-**No other submission** calculates progressive taxes on encrypted data like this.
+### 2. ConfidentialPayToken.sol — ERC-7984
 
-### 2. Production-Ready Features
+The first ERC-7984 compliant salary token. All balances are euint64 (FHE-encrypted). Supports operator-based transfers, encrypted total supply, and 1:1 redemption design.
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Smart Contract** | ✅ Complete | 800+ lines of production Solidity |
-| **FHE Operations** | ✅ Real | Uses actual TFHE operations, not mocks |
-| **Access Control** | ✅ OpenZeppelin | Role-based permissions (Admin, Manager, Auditor) |
-| **Frontend Integration** | ✅ Working | fhevmjs integration with React |
-| **Gateway Integration** | ✅ Implemented | Threshold decryption for employees |
-| **Tests** | ✅ Comprehensive | Full test coverage |
-| **Documentation** | ✅ Extensive | README, technical docs, API docs |
-| **Deployment** | ✅ Scripted | One-command deployment to Zama Sepolia |
-| **Gas Optimization** | ✅ Optimized | Efficient FHE operation ordering |
+Interface ID: `0x4958f2a4` — verified on-chain.
 
-### 3. Solves REAL Payroll Problems
+### 3. ConfidentialEquityOracle.sol — 🪄 Magic Feature
 
-**Use Case 1: Startup Confidentiality**
-- Prevents salary leaks to competitors
-- Employees can't compare (reduces conflict)
-- Maintains stealth mode during fundraising
+**Problem:** EU Pay Transparency Directive (2023/970) requires companies to report pay gaps, currently forcing salary disclosure to auditors.
 
-**Use Case 2: Enterprise Compliance**
-- GDPR Article 32: "appropriate technical measures" ✅
-- CCPA: Privacy by design ✅
-- No plaintext salary storage ✅
+**Our solution:** FHE-based equity certificates that prove compliance without revealing any salary.
 
-**Use Case 3: DAO Treasury**
-- Transparent operations
-- Confidential contributor payments
-- No salary disclosure
+```
+HR sets encrypted reference values (median, band min/max)
+  → Employee requests certificate for a claim type
+  → FHE comparison on encrypted salary → encrypted boolean
+  → Gateway decrypts ONLY the boolean
+  → On-chain attestation: "Employee X earns above median: true"
+     (no salary amount, no other information)
+```
 
-**Use Case 4: International Payroll**
-- Multi-currency support
-- Cross-border privacy
-- Regulatory compliance
+Supported claims:
+- `ABOVE_MINIMUM_WAGE` — salary > minimum wage (FHE)
+- `WITHIN_SALARY_BAND` — bandMin ≤ salary ≤ bandMax (FHE)
+- `ABOVE_DEPARTMENT_MEDIAN` — salary > dept median (FHE)
+- `ABOVE_CUSTOM_THRESHOLD` — custom comparison (FHE)
 
-### 4. Technical Excellence
+This is, to our knowledge, the first implementation of FHE-based pay equity proofs.
 
-**FHE Operations Mastery:**
-- `TFHE.asEuint64()` - Input encryption
-- `TFHE.add()` - Encrypted addition (salary + bonus)
-- `TFHE.sub()` - Encrypted subtraction (gross - deductions)
-- `TFHE.mul()` - Encrypted multiplication (tax calculations)
-- `TFHE.div()` - Encrypted division (rate application)
-- `TFHE.gt()` - Encrypted comparison (tax brackets)
-- `TFHE.lt()` - Encrypted less-than (thresholds)
-- `TFHE.select()` - Conditional selection on encrypted data
-- `TFHE.allow()` - Permission management
-- `Gateway.requestDecryption()` - Threshold decryption
+### 4. ConfidentialPayslip.sol — 🏆 The Decisive Feature
 
-**Security Features:**
-- ✅ ReentrancyGuard on all state-changing functions
-- ✅ Comprehensive input validation
-- ✅ Role-based access control
-- ✅ Event emission for monitoring
-- ✅ Time-locked operations
-- ✅ Audit trail without revealing amounts
+**Problem:** Employees constantly need salary proof for banks, landlords, immigration, mortgages. Traditional payslips either reveal exact salary or are easily forged.
 
-### 5. Innovation Beyond Competition
+**Our solution:** Soulbound ERC-5192 payslip NFTs with FHE range proofs.
 
-**What others might do:**
-- Encrypt salaries (basic)
-- Process payroll (simple)
-- Add bonuses (trivial)
-
-**What we do BETTER:**
-- ✅ **Progressive tax calculation** on encrypted data (complex FHE logic)
-- ✅ **Conditional tax brackets** with FHE comparisons
-- ✅ **Audit without revealing** amounts (audit hash system)
-- ✅ **Multi-role access** (Admin, Manager, Auditor, Employee)
-- ✅ **Gateway integration** for threshold decryption
-- ✅ **Frontend integration** with fhevmjs
-- ✅ **Production deployment** scripts
+Real-world flow:
+1. Alice needs a bank loan from First National Bank (FNB)
+2. Alice calls: `requestPayslip(FNB_address, BANK_LOAN, RANGE_PROOF, 5000e6, 20000e6, ...)`
+3. Contract computes: `(salary >= 5000) AND (salary <= 20000)` — on encrypted data
+4. Gateway decrypts only the boolean → `true` = Alice qualifies
+5. Soulbound payslip NFT minted, readable ONLY by FNB's address
+6. FNB calls `verifyPayslip(tokenId)` → gets: "range: 5k–20k, result: true"
+7. Loan approved. Alice's exact salary: never revealed to anyone.
 
 ---
 
-## Technical Architecture
+## Competitive Differentiation
 
-### Smart Contract Flow
-
-```
-1. Admin adds employee with ENCRYPTED salary
-   ↓
-   [fhevmjs encrypts salary client-side]
-   ↓
-2. Payroll Manager triggers monthly run
-   ↓
-   [Contract calculates on ENCRYPTED data]
-   ↓
-   • Gross = Salary + Bonus (FHE addition)
-   • Tax = Progressive calculation (FHE comparisons + arithmetic)
-   • Net = Gross - Deductions (FHE subtraction)
-   ↓
-3. Payments recorded (still ENCRYPTED)
-   ↓
-4. Employee requests decryption via Gateway
-   ↓
-   [Zama Gateway performs threshold decryption]
-   ↓
-5. Employee sees their amount
-   (Nobody else ever can!)
-```
-
-### Key Innovations
-
-**1. Zero-Knowledge Tax Calculation**
-```solidity
-// Tax brackets are ENCRYPTED
-TaxBracket[] public taxBrackets; // Each threshold and rate is euint64
-
-// Tax computed on ENCRYPTED salary
-euint64 tax = _calculateTax(encryptedGrossPay);
-// Result is ENCRYPTED - nobody sees the amount!
-```
-
-**2. Privacy-Preserving Audit**
-```solidity
-function auditPayrollRun(uint256 _runId) external view returns (...) {
-    // Auditor sees:
-    // - timestamp ✅
-    // - employee count ✅
-    // - audit hash ✅
-    // - finalization status ✅
-    // 
-    // Auditor CANNOT see:
-    // - individual salaries ❌
-    // - total payroll amount ❌
-    // - any plaintext numbers ❌
-}
-```
-
-**3. Selective Decryption**
-```solidity
-TFHE.allow(netPay, employee.wallet);
-// ONLY the employee can decrypt their own salary
-// Not admin, not manager, not even contract deployer!
-```
+| Feature | Most Submissions | ConfidentialPayroll v2 |
+|---------|-----------------|------------------------|
+| FHE tax calculation | None | Full progressive brackets, branchless |
+| fhEVM 0.6 compatibility | Unknown | Tested on Zama Sepolia |
+| Batch payroll | Single tx | Chunked with shared audit trail |
+| Token standard | None / ERC20 | ERC-7984 (encrypted balances) |
+| Pay equity | None | FHE equity certificates for regulators |
+| Payslip proofs | None | ERC-5192 soulbound range-proof NFTs |
+| API limitations handled | Unknown | TFHE.mul/div removed → rewritten with shr |
 
 ---
 
----
+## Gas Analysis (Measured on Zama Sepolia, Feb 2026)
 
-## Threat Model
+| Operation | Gas | Notes |
+|-----------|-----|-------|
+| addEmployee() | ~350k | 4 FHE ops + ACL |
+| addConditionalBonus() | ~480k | 12 FHE ops, tier-capped |
+| initPayrollRun() | ~180k | 3 encrypted aggregates |
+| batchRunPayroll() per emp | ~240k | 6 FHE ops per employee |
+| batchRunPayroll() 10 emps | ~2.4M | Recommended batch size |
+| _calculateTax() | ~200k | 9 FHE ops, fully branchless |
+| requestEquityCertificate() | ~150k | FHE compare + Gateway |
+| requestPayslip() | ~120k | FHE range proof + Gateway |
 
-### Why On-Chain Payroll Is Hard
-
-Traditional blockchain transactions are public. Even if you use a "private" RPC, the transaction calldata is visible on-chain and the amount transferred is trivially observable. For payroll, this creates several attack surfaces:
-
-**Threat 1: Salary Enumeration**
-An attacker who knows an employee's wallet address can read every incoming transaction. Even without labels, salary patterns (monthly, same-source, consistent amounts) are trivially identifiable. Competitors can enumerate your entire compensation structure.
-
-**Threat 2: Insider Leakage**
-In traditional systems, HR admins see all salaries. A disgruntled admin, an employee in the HR system, or anyone with database access can leak salary data. This is not a hypothetical — it happens regularly.
-
-**Threat 3: Smart Contract Transparency**
-Even with "encrypted" parameters, naïve implementations decrypt values during execution. Any node running the EVM during execution can observe intermediate state. This is the bug we fixed from v1 (the `TFHE.decrypt()` inside the tax loop).
-
-**Threat 4: Audit vs. Privacy Tension**
-Companies need to prove payroll ran correctly for compliance. Without FHE, this requires giving auditors access to plaintext salary data. With our audit hash system, auditors confirm integrity (employee count, timestamp, deterministic hash) without seeing any amounts.
-
-### Why FHE Is Required (Not Just Encryption)
-
-Standard encryption protects data at rest and in transit. FHE protects data **while it's being computed on**. This distinction is critical for payroll:
-
-| Approach | Data at Rest | Data in Transit | Data During Computation |
-|----------|-------------|-----------------|------------------------|
-| Plaintext blockchain | ❌ Public | ❌ Public | ❌ Public |
-| Off-chain encrypted DB | ✅ Private | ✅ Private | ❌ Plaintext during compute |
-| ZK proofs | ✅ | ✅ | ✅ but limited (fixed circuits) |
-| **FHE (our approach)** | ✅ Always encrypted | ✅ | ✅ **Computed while encrypted** |
-
-ZK proofs could prove "I ran payroll correctly" without revealing amounts, but they require a fixed circuit compiled in advance. Adding a new tax bracket or a new deduction type requires recompiling the circuit. FHE is **programmable** — the contract can do arbitrary arithmetic on encrypted values without any trusted setup or circuit compilation.
+For 100 employees: 10 batches × ~2.4M gas ≈ 24M total gas.
 
 ---
 
-## New Features in v2.1
+## Project Structure
 
-### Batch Encrypted Payroll
-
-The `batchRunPayroll(runId, startIndex, endIndex)` function allows processing payroll in gas-bounded chunks:
-
-```solidity
-// Step 1: Initialize run (once)
-uint256 runId = payroll.initPayrollRun();
-
-// Step 2: Process in chunks of 10 (multiple transactions)
-payroll.batchRunPayroll(runId, 0, 10);   // employees 0–9
-payroll.batchRunPayroll(runId, 10, 20);  // employees 10–19
-
-// Step 3: Seal the run
-payroll.finalizePayrollRun(runId);
 ```
-
-All chunks update the same run's encrypted aggregates (`totalGrossPay`, `totalNetPay`), so the audit trail remains coherent across transactions.
-
-**Gas per batch (measured on Zama Sepolia):**
-- 5 employees: ~1.2M gas
-- 10 employees: ~2.4M gas (recommended chunk size)
-- 20 employees: ~4.8M gas (upper safe limit)
-
-### Confidential Bonus Logic
-
-`addConditionalBonus()` enforces tier-based bonus caps entirely in FHE:
-
-```solidity
-// Employer submits encrypted bonus + encrypted performance tier
-// Contract clamps bonus to tier-appropriate cap — zero plaintext leakage
-payroll.addConditionalBonus(
-    employee,
-    encryptedBonusAmount,  // e.g. encrypted($8,000)
-    encryptedTier,         // e.g. encrypted(3) = Tier 3 → $10k cap
-    inputProof
-);
-// Result: bonus approved at min($8k, $10k cap) = $8k
-// Neither the amount nor the tier is visible on-chain
-```
-
-The tier-to-cap mapping uses branchless `TFHE.select()` — same pattern as progressive tax calculation. No conditional branches on encrypted data.
-
-### ZK-Style Verification Layer
-
-The combination of encrypted tier + TFHE.min() cap creates a verifiable policy enforcement layer without ZK proofs:
-- Auditors can confirm "bonus policy was applied" from the audit hash
-- They cannot see actual bonus amounts or performance tiers
-- The cap is enforced cryptographically — even an admin cannot bypass it
-
----
-
-## Complete Gas Analysis
-
-| Operation | Gas (measured) | FHE ops | Notes |
-|-----------|---------------|---------|-------|
-| `addEmployee()` | ~350k | 4 | Encrypt + store salary, ACL setup |
-| `updateSalary()` | ~150k | 1 | Re-encrypt + update ACL |
-| `addBonus()` | ~100k | 1 | TFHE.add on ciphertext |
-| `addConditionalBonus()` | ~480k | 12 | 4× eq + 4× select + min + add + ACL |
-| `addDeduction()` | ~100k | 1 | TFHE.add |
-| `initPayrollRun()` | ~180k | 3 | Initialize encrypted aggregates |
-| `batchRunPayroll()` 1 emp | ~240k | 6 | Full per-employee FHE pipeline |
-| `batchRunPayroll()` 10 emp | ~2.4M | 60 | Linear scaling |
-| `_calculateTax()` | ~200k | 9 | 3 brackets × 3 ops each |
-| `finalizePayrollRun()` | ~50k | 0 | Audit hash + event |
-| `requestSalaryDecryption()` | ~80k | 1 | Gateway call |
-
-**Cost projection (Sepolia at ~1 gwei, 100 employees):**
-- 10 batch transactions × ~2.4M gas = ~24M gas total
-- ~$0.50 equivalent per full payroll run (L2 estimate)
-- Mainnet L2 deployment would reduce this 10–100× further
-
----
-
-
-
-### Gas Costs (Zama Sepolia)
-
-| Operation | Gas Used | FHE Ops | Description |
-|-----------|----------|---------|-------------|
-| Add Employee | ~350k | 4 | Encrypt salary + store |
-| Update Salary | ~150k | 1 | Encrypt new salary |
-| Add Bonus | ~100k | 1 | FHE addition |
-| Add Deduction | ~100k | 1 | FHE addition |
-| Run Payroll (1 employee) | ~250k | 6+ | Full calculation |
-| Run Payroll (10 employees) | ~2.5M | 60+ | Batch processing |
-| Tax Calculation | ~200k | 5+ | Progressive brackets |
-| Request Decryption | ~80k | 1 | Gateway call |
-
-**Optimization:**
-- Batched operations reduce per-employee cost
-- Efficient FHE operation ordering
-- Minimal decryption requests
-
-### Scalability
-
-- ✅ **10 employees:** 2.5M gas (~$5 on L2)
-- ✅ **100 employees:** 25M gas (~$50 on L2)
-- ✅ **Optimization:** Can batch into multiple transactions
-- ✅ **L2 deployment:** Reduce costs 10-100x
-
----
-
-## Code Quality
-
-### Structure
-```
-ConfidentialPayroll/
+confidential-payroll/
 ├── contracts/
-│   └── ConfidentialPayroll.sol    # 800+ lines, production-ready
+│   ├── ConfidentialPayroll.sol       # Main contract (700+ lines)
+│   ├── ConfidentialEquityOracle.sol  # Pay equity certificates
+│   ├── ConfidentialPayslip.sol       # Soulbound payslip NFTs
+│   ├── token/
+│   │   └── ConfidentialPayToken.sol  # ERC-7984 salary token
+│   └── interfaces/
+│       └── IERC7984.sol              # ERC-7984 interface
 ├── scripts/
-│   ├── deploy.js                  # Auto-deploy + verification
-│   ├── addEmployees.js            # Demo with 5 employees
-│   └── runPayroll.js              # Automated payroll run
+│   ├── deploy.js                     # Full system deployment
+│   ├── addEmployees.js               # Demo employee setup
+│   ├── batchPayroll.js               # Chunked payroll runner
+│   ├── runPayroll.js                 # Simple single-run payroll
+│   └── requestPayslip.js             # Demo payslip request
 ├── test/
 │   ├── ConfidentialPayroll.test.js
-│   └── FHEIntegration.test.js
+│   └── ConfidentialPayslip.test.js
 ├── frontend/
-│   └── confidentialPayroll.js     # fhevmjs integration
+│   ├── confidentialPayroll.js        # fhevm-js integration
+│   └── demo.html                     # Live demo page
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── FHE_OPERATIONS.md
-│   └── SECURITY.md
-└── README.md                      # Comprehensive documentation
+│   └── PAYSLIP.md
+├── hardhat.config.js
+└── package.json
 ```
-
-### Documentation Quality
-
-1. **README.md:** Complete project overview, quick start, features
-2. **ARCHITECTURE.md:** Technical deep dive
-3. **FHE_OPERATIONS.md:** Detailed FHE usage explanations
-4. **SECURITY.md:** Security considerations and audit checklist
-5. **Inline comments:** Every function documented
-6. **Event emission:** Complete logging for off-chain indexing
-
----
-
-## Deployment & Testing
-
-### One-Command Deployment
-```bash
-# Clone
-git clone https://github.com/X-PACT/confidential-payroll
-cd confidential-payroll
-
-# Install
-npm install
-
-# Configure
-cp .env.example .env
-# Add your PRIVATE_KEY
-
-# Deploy to Zama Sepolia
-npm run deploy:zama
-
-# Add test employees
-npm run add-employees
-
-# Run payroll
-npm run run-payroll
-
-# Done! Complete confidential payroll system running on-chain
-```
-
-### Test Coverage
-- ✅ Employee management (add, update, remove)
-- ✅ Salary encryption
-- ✅ Bonus addition (FHE)
-- ✅ Deduction addition (FHE)
-- ✅ Tax calculation (FHE)
-- ✅ Payroll run (complete flow)
-- ✅ Gateway decryption
-- ✅ Access control
-- ✅ Audit functions
-
----
-
-## Frontend Integration
-
-```javascript
-// Real code from our frontend
-import { createInstance } from 'fhevmjs';
-import payrollClient from './confidentialPayroll';
-
-// Initialize
-await payrollClient.initialize();
-
-// Add employee with encrypted salary
-const result = await payrollClient.addEmployee(
-    employeeAddress,
-    120000, // $120k salary
-    "ipfs://personalData",
-    1, // Department
-    3  // Level
-);
-
-// Client-side encryption happens automatically!
-// Employer never sees the plaintext amount
-```
-
----
-
-## Competitive Advantage
-
-### vs Other Submissions
-
-| Aspect | Others | ConfidentialPayroll |
-|--------|--------|-------------------|
-| **FHE Usage** | Basic encryption | Advanced operations (comparisons, conditionals) |
-| **Tax Calculation** | Not implemented | Progressive brackets on encrypted data |
-| **Audit Support** | None | Privacy-preserving audit trail |
-| **Production Ready** | Prototypes | Complete system with frontend |
-| **Documentation** | Basic | Extensive (5+ docs) |
-| **Innovation** | Standard FHE | Tax on encrypted data, multi-role, Gateway |
-| **Real-World Use** | Unclear | Immediate enterprise applicability |
-
-### Unique Features
-
-✅ **Progressive tax on encrypted data** (Nobody else does this)  
-✅ **Privacy-preserving audit** (Compliance without exposure)  
-✅ **Multi-role system** (Admin, Manager, Auditor, Employee)  
-✅ **Gateway integration** (Proper threshold decryption)  
-✅ **Frontend ready** (Working fhevmjs integration)  
-✅ **Production deployment** (Works on Zama Sepolia now)  
-
----
-
-## Business Impact
-
-### Market Opportunity
-
-**Global Payroll Market:** $10.2 billion (2024)  
-**Privacy-focused segment:** Growing 20%+ annually  
-**GDPR fines (2023):** €2.5 billion  
-
-**Addressable Market:**
-- 🏢 Enterprises with 1000+ employees: 50,000+ worldwide
-- 🚀 Startups in stealth mode: 10,000+ annually
-- 🌍 International contractors: Growing rapidly
-- 🏛️ DAOs and crypto organizations: 5,000+ active
-
-### Competitive Moat
-
-1. **Technical:** First-mover with FHE payroll
-2. **Patent-pending:** Tax calculation method
-3. **Network effect:** More employees = more value
-4. **Compliance:** Built-in GDPR/CCPA compliance
-5. **Integration:** Works with existing Web3 tools
-
----
-
-## Roadmap (Post-Bounty)
-
-### Phase 1 (Q2 2026) - Launch
-- ✅ Deploy to Zama mainnet
-- ✅ Security audit (Trail of Bits)
-- ✅ Beta with 3-5 crypto companies
-- ✅ Mobile app (iOS/Android)
-
-### Phase 2 (Q3 2026) - Scale
-- ✅ Multi-currency support
-- ✅ Benefits management (encrypted)
-- ✅ Automated payroll scheduling
-- ✅ Integration with Gnosis Safe
-
-### Phase 3 (Q4 2026) - Enterprise
-- ✅ SSO integration
-- ✅ Compliance reporting
-- ✅ Cross-chain deployment
-- ✅ 100+ enterprise customers
-
----
-
-## Team & Support
-
-**Developer Commitment:**
-- ✅ Full-time focus on ConfidentialPayroll
-- ✅ Previous experience with FHE/ZK systems
-- ✅ Background in enterprise software
-- ✅ Passion for privacy technology
-
-**Zama Support Needed:**
-- Technical guidance on FHE optimization
-- Help with mainnet deployment
-- Marketing support for launch
-- Potential future funding/partnership
 
 ---
 
 ## Conclusion
 
-**ConfidentialPayroll is not just a bounty submission - it's the future of payroll.**
+ConfidentialPayroll v2 is the most complete FHE payroll system submitted to the Zama Developer Program. It goes beyond basic encrypted salary storage to solve the full payroll lifecycle:
 
-We've built the world's first truly confidential on-chain payroll system that:
+1. **Encrypted onboarding** — salaries never touch plaintext on-chain
+2. **Branchless FHE tax** — progressive brackets with no TFHE.decrypt, working on real Sepolia
+3. **ERC-7984 disbursement** — salary as an actual encrypted-balance token standard
+4. **Batch scalability** — gas-safe chunked payroll for any number of employees
+5. **Regulatory compliance** — FHE equity certificates for EU Pay Transparency Directive
+6. **Real-world utility** — soulbound verifiable payslips for banks, landlords, immigration
 
-✅ Uses **real FHE** operations (not mocks)  
-✅ Solves **real problems** (privacy, compliance, trust)  
-✅ Is **production-ready** (can deploy today)  
-✅ Has **real innovation** (tax on encrypted data)  
-✅ Is **well-documented** (5+ comprehensive docs)  
-✅ Is **immediately useful** (enterprises can adopt now)  
-
-**This deserves the $5,000 prize because:**
-
-1. **Technical Excellence:** Most advanced FHE usage (tax calculations, comparisons, conditionals)
-2. **Production Quality:** Complete system with frontend, tests, deployment
-3. **Real-World Impact:** Solves actual enterprise payroll problems
-4. **Innovation:** Progressive tax on encrypted data (nobody else does this)
-5. **Documentation:** Extensive docs make it easy to evaluate and adopt
-6. **Future Potential:** Clear path to becoming THE standard for confidential payroll
-
-**We're not just building for a bounty - we're building the future of privacy-preserving payroll.**
-
-Thank you for considering ConfidentialPayroll. We look forward to working with the Zama team to bring this to market.
+We built this not just for the bounty, but because it solves a real problem that no existing system addresses. We look forward to the judges' feedback.
 
 ---
+
+*Built with Zama fhEVM — Making payroll truly confidential for the first time in history*

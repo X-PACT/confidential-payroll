@@ -9,12 +9,19 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  if (signers.length === 0) {
+    throw new Error("No deployer account found. Set PRIVATE_KEY in .env before deploying to zama-sepolia.");
+  }
+  const deployer = signers[0];
 
   console.log("═══════════════════════════════════════════════════════");
   console.log("  ConfidentialPayroll v2 — Zama fhEVM Deployment");
   console.log("═══════════════════════════════════════════════════════");
-  console.log(`  Network:   ${(await ethers.provider.getNetwork()).name}`);
+  const network = await ethers.provider.getNetwork();
+  const networkName = network.name;
+
+  console.log(`  Network:   ${networkName}`);
   console.log(`  Deployer:  ${deployer.address}`);
   console.log(`  Balance:   ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} ETH`);
   console.log("═══════════════════════════════════════════════════════\n");
@@ -66,7 +73,7 @@ async function main() {
     payToken: tokenAddr,
     equityOracle: oracleAddr,
     payslipContract: payslipAddress,
-    network: "zama-sepolia",
+    network: networkName,
     deployedAt: new Date().toISOString()
   }, null, 2));
 
@@ -80,7 +87,9 @@ async function main() {
   console.log("\n🎯 Next steps:");
   console.log("   npm run add-employees");
   console.log("   npm run run-payroll");
-  console.log(`\n🔍 View on explorer: https://explorer.zama.ai/address/${payrollAddress}`);
+  if (networkName === "zama-sepolia" || networkName === "sepolia") {
+    console.log(`\n🔍 View on Etherscan: https://sepolia.etherscan.io/address/${payrollAddress}`);
+  }
 }
 
 main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });

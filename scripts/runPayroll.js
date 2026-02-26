@@ -49,7 +49,12 @@ async function main() {
   console.log(`   EquityOracle:  ${oracleAddress}\n`);
 
   // ─── Connect to contracts ──────────────────────────────────────────────────
-  const [manager] = await hre.ethers.getSigners();
+  const signers = await hre.ethers.getSigners();
+  if (signers.length === 0) {
+    console.error("❌ No signer found. Set PRIVATE_KEY in .env before running this script.");
+    process.exit(1);
+  }
+  const manager = signers[0];
 
   const payroll = await hre.ethers.getContractAt(
     "ConfidentialPayroll",

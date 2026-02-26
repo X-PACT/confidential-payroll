@@ -2,7 +2,7 @@
  * batchPayroll.js — Run full payroll in gas-bounded chunks
  *
  * Usage:
- *   npx hardhat run scripts/batchPayroll.js --network zamasepolia
+ *   npx hardhat run scripts/batchPayroll.js --network zama-sepolia
  *
  * This script replaces the old runPayroll.js for large employee sets (15+).
  * For small demos (<10 employees), runPayroll.js still works fine.
@@ -25,7 +25,11 @@ async function main() {
     console.log();
 
     const deploymentInfo = JSON.parse(fs.readFileSync("./deployment.json", "utf8"));
-    const [deployer]     = await hre.ethers.getSigners();
+    const signers = await hre.ethers.getSigners();
+    if (signers.length === 0) {
+        throw new Error("No signer found. Set PRIVATE_KEY in .env before running this script.");
+    }
+    const deployer = signers[0];
 
     const payroll = await hre.ethers.getContractAt(
         "ConfidentialPayroll",

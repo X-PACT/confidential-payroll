@@ -23,9 +23,9 @@ module.exports = {
       chainId: 31337,
     },
     // Zama Protocol runs ON Ethereum Sepolia (chainId 11155111)
-    // devnet.zama.ai is DEPRECATED — use standard Sepolia RPC
+    // Use a live public Sepolia RPC by default; override with SEPOLIA_RPC_URL in .env
     "zama-sepolia": {
-      url: process.env.SEPOLIA_RPC_URL || "https://eth-sepolia.public.blastapi.io",
+      url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
       chainId: 11155111,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       gasPrice: "auto",
@@ -33,7 +33,7 @@ module.exports = {
     },
     // Alias so both names work
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL || "https://eth-sepolia.public.blastapi.io",
+      url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
       chainId: 11155111,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       gasPrice: "auto",
@@ -61,4 +61,3 @@ module.exports = {
     timeout: 300000
   }
 };
-

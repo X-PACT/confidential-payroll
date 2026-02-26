@@ -12,9 +12,8 @@
 | `TFHE.asEuint64()` | Encrypt plaintext or `einput` | All contracts |
 | `TFHE.add()` | Gross = salary + bonus; net accumulation | ConfidentialPayroll |
 | `TFHE.sub()` | Net = gross − deductions | ConfidentialPayroll, CPT |
-| `TFHE.mul()` | Tax = bracket_amount × rate | ConfidentialPayroll |
-| `TFHE.div()` | Tax = (amount × rate) / 10000 | ConfidentialPayroll |
 | `TFHE.min()` | Overflow-safe deduction cap | ConfidentialPayroll, CPT |
+| `TFHE.shr()` | Tax-rate approximation via bit shifts | ConfidentialPayroll |
 | `TFHE.gt()` | Tax bracket threshold check | ConfidentialPayroll |
 | `TFHE.ge()` | Salary band: above minimum | ConfidentialEquityOracle, ConfidentialPayslip |
 | `TFHE.le()` | Salary band: below maximum | ConfidentialEquityOracle, ConfidentialPayslip |
@@ -38,7 +37,7 @@ For each bracket i with threshold[i] and rate[i]:
   bracket_amt_i   = select(above_prev_i,                  ← TFHE.select
                       capped_i - threshold[i-1],          ← TFHE.sub
                       0)
-  bracket_tax_i   = (bracket_amt_i × rate[i]) / 10000    ← TFHE.mul + TFHE.div
+  bracket_tax_i   = approxRate(bracket_amt_i)            ← TFHE.shr + TFHE.sub
   totalTax        += bracket_tax_i                        ← TFHE.add
 ```
 
@@ -175,9 +174,8 @@ The Gateway uses threshold cryptography — no single party can decrypt. The dec
 |-----------|-----|-------|
 | `TFHE.add` | ~50k | Two euint64 ciphertexts |
 | `TFHE.sub` | ~50k | Safe subtraction |
-| `TFHE.mul` | ~100k | More expensive than add/sub |
-| `TFHE.div` | ~150k | Most expensive arithmetic |
 | `TFHE.min` | ~80k | Internal select + comparison |
+| `TFHE.shr` | ~45k | Scalar shift approximation for tax rate |
 | `TFHE.gt/ge/le` | ~60k | Encrypted comparison → ebool |
 | `TFHE.and` | ~40k | Boolean FHE operation |
 | `TFHE.select` | ~90k | Conditional ciphertext selection |

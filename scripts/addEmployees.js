@@ -1,150 +1,169 @@
 const hre = require("hardhat");
-const fs = require('fs');
+const fs = require("fs");
+const path = require("path");
+const { createInstance } = require("fhevmjs");
+require("dotenv").config();
+
+function must(name) {
+  const value = process.env[name];
+  if (!value || value.trim() === "") {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value.trim();
+}
+
+async function getFheInstance() {
+  const networkUrl = process.env.SEPOLIA_RPC_URL || hre.network.config.url;
+  if (!networkUrl) {
+    throw new Error("Missing RPC URL. Set SEPOLIA_RPC_URL in .env");
+  }
+
+  const aclContractAddress = must("ACL_CONTRACT");
+  const kmsContractAddress = must("KMS_CONTRACT");
+  const gatewayUrl = must("GATEWAY_URL");
+
+  return createInstance({
+    networkUrl,
+    gatewayUrl,
+    aclContractAddress,
+    kmsContractAddress,
+  });
+}
+
+function loadDeployment() {
+  const deploymentPath = path.join(process.cwd(), "deployment.json");
+  if (!fs.existsSync(deploymentPath)) {
+    throw new Error("deployment.json not found. Run deploy first.");
+  }
+  return JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
+}
 
 async function main() {
-    console.log("===========================================");
-    console.log("Adding Test Employees with Encrypted Salaries");
-    console.log("===========================================\n");
+  console.log("===========================================");
+  console.log("Adding Employees with Real FHE Encryption");
+  console.log("===========================================\n");
 
-    // Load deployment info
-    const deploymentInfo = JSON.parse(fs.readFileSync('./deployment.json', 'utf8'));
-    const contractAddress = deploymentInfo.contractAddress;
+  if (!["zama-sepolia", "sepolia"].includes(hre.network.name)) {
+    throw new Error(
+      `This script is for Sepolia-based fhEVM only. Current network: ${hre.network.name}`
+    );
+  }
 
-    console.log("Contract Address:", contractAddress);
-    console.log();
+  const deployment = loadDeployment();
+  const payrollAddress = deployment.contractAddress;
+  if (!payrollAddress) {
+    throw new Error("contractAddress missing in deployment.json");
+  }
 
-    const [deployer] = await hre.ethers.getSigners();
-    const ConfidentialPayroll = await hre.ethers.getContractFactory("ConfidentialPayroll");
-    const payroll = ConfidentialPayroll.attach(contractAddress);
+  const signers = await hre.ethers.getSigners();
+  if (signers.length === 0) {
+    throw new Error("No deployer account found. Set PRIVATE_KEY in .env before running this script.");
+  }
+  const admin = signers[0];
+  const payroll = await hre.ethers.getContractAt("ConfidentialPayroll", payrollAddress);
+  const fhe = await getFheInstance();
 
-    // Create test employee wallets
-    const employees = [
-        {
-            name: "Alice (Software Engineer)",
-            wallet: hre.ethers.Wallet.createRandom().address,
-            salary: 120000, // $120k/year = $10k/month
-            department: 1, // Engineering
-            level: 3,
-            personalData: "ipfs://QmTest123AlicePersonalData"
-        },
-        {
-            name: "Bob (Senior Developer)",
-            wallet: hre.ethers.Wallet.createRandom().address,
-            salary: 180000, // $180k/year = $15k/month
-            department: 1, // Engineering
-            level: 5,
-            personalData: "ipfs://QmTest456BobPersonalData"
-        },
-        {
-            name: "Carol (Product Manager)",
-            wallet: hre.ethers.Wallet.createRandom().address,
-            salary: 140000, // $140k/year = ~$11.6k/month
-            department: 2, // Product
-            level: 4,
-            personalData: "ipfs://QmTest789CarolPersonalData"
-        },
-        {
-            name: "Dave (DevOps)",
-            wallet: hre.ethers.Wallet.createRandom().address,
-            salary: 110000, // $110k/year = ~$9.1k/month
-            department: 1, // Engineering
-            level: 3,
-            personalData: "ipfs://QmTest012DavePersonalData"
-        },
-        {
-            name: "Eve (Designer)",
-            wallet: hre.ethers.Wallet.createRandom().address,
-            salary: 95000, // $95k/year = ~$7.9k/month
-            department: 3, // Design
-            level: 2,
-            personalData: "ipfs://QmTest345EvePersonalData"
-        }
-    ];
+  console.log(`Network:          ${hre.network.name}`);
+  console.log(`Payroll Contract: ${payrollAddress}`);
+  console.log(`Admin:            ${admin.address}\n`);
 
-    console.log("Adding employees with ENCRYPTED salaries...\n");
+  const employees = [
+    {
+      name: "Demo Employee (deployer)",
+      wallet: admin.address,
+      annualSalaryUsd: 120000,
+      department: 1,
+      level: 3,
+      gender: 0,
+      personalData: "ipfs://QmDemoEmployeeData",
+    },
+    {
+      name: "Alice (Engineering)",
+      wallet: hre.ethers.Wallet.createRandom().address,
+      annualSalaryUsd: 180000,
+      department: 1,
+      level: 5,
+      gender: 1,
+      personalData: "ipfs://QmAliceEncryptedData",
+    },
+    {
+      name: "Bob (Product)",
+      wallet: hre.ethers.Wallet.createRandom().address,
+      annualSalaryUsd: 140000,
+      department: 2,
+      level: 4,
+      gender: 2,
+      personalData: "ipfs://QmBobEncryptedData",
+    },
+  ];
 
-    // Save employee info for later
-    const employeeInfo = [];
+  const added = [];
 
-    for (const emp of employees) {
-        console.log(`Adding: ${emp.name}`);
-        console.log(`  Wallet: ${emp.wallet}`);
-        console.log(`  Annual Salary: $${emp.salary.toLocaleString()}`);
-        console.log(`  Monthly Salary: $${(emp.salary / 12).toLocaleString()}`);
-        console.log(`  Department: ${emp.department}, Level: ${emp.level}`);
+  for (const employee of employees) {
+    const monthlySalaryMicros = Math.floor((employee.annualSalaryUsd / 12) * 1e6);
 
-        // Calculate monthly salary in micro-units (6 decimal places, like USDC)
-        // BUG FIX: was previously using emp.salary * 1e6 directly which gave annual
-        // salary instead of monthly — caught this during first Sepolia test run when
-        // Alice's "salary" was 12x what it should have been. Divided by 12 first now.
-        const monthlySalary = Math.floor((emp.salary / 12) * 1e6);
+    console.log(`Adding ${employee.name}`);
+    console.log(`  wallet: ${employee.wallet}`);
+    console.log(`  annual salary: $${employee.annualSalaryUsd.toLocaleString()}`);
 
-        try {
-            // In production, this would use fhevmjs to encrypt client-side
-            // For this demo, we'll use TFHE.asEuint64 directly in contract
-            // Note: This is simplified for demo. Real implementation uses einput + inputProof
-            
-            // NOTE: addEmployee now takes gender as last param (added in v2 for equity oracle)
-            // was getting "wrong number of arguments" revert until I checked the ABI again —
-            // the contract signature changed but the script wasn't updated. Added 0 (undisclosed).
-            const tx = await payroll.addEmployee(
-                emp.wallet,
-                monthlySalary, // In production, this would be encrypted einput
-                "0x", // inputProof (empty for demo)
-                emp.personalData,
-                emp.department,
-                emp.level,
-                0, // gender: 0 = undisclosed (default for demo)
-                { gasLimit: 500000 }
-            );
+    try {
+      const input = fhe.createEncryptedInput(payrollAddress, admin.address);
+      input.add64(monthlySalaryMicros);
+      const { handles, inputProof } = await input.encrypt();
 
-            const receipt = await tx.wait();
-            console.log(`  ✅ Added successfully! Gas used: ${receipt.gasUsed.toString()}`);
-            console.log(`  Transaction: ${receipt.hash}\n`);
+      const tx = await payroll.connect(admin).addEmployee(
+        employee.wallet,
+        handles[0],
+        inputProof,
+        employee.personalData,
+        employee.department,
+        employee.level,
+        employee.gender
+      );
 
-            employeeInfo.push({
-                name: emp.name,
-                wallet: emp.wallet,
-                annualSalary: emp.salary,
-                monthlySalary: emp.salary / 12,
-                department: emp.department,
-                level: emp.level
-            });
+      const receipt = await tx.wait();
+      console.log(`  ✅ added in tx ${receipt.hash}`);
 
-        } catch (error) {
-            console.log(`  ❌ Failed: ${error.message}\n`);
-        }
+      added.push({
+        ...employee,
+        monthlySalaryMicros,
+        txHash: receipt.hash,
+      });
+    } catch (error) {
+      console.log(`  ❌ failed: ${error.shortMessage || error.message}`);
     }
 
-    // Save employee info
-    fs.writeFileSync(
-        './employees.json',
-        JSON.stringify(employeeInfo, null, 2)
-    );
+    console.log();
+  }
 
-    console.log("===========================================");
-    console.log("Summary");
-    console.log("===========================================");
-    console.log(`Total Employees Added: ${employeeInfo.length}`);
-    console.log(`Total Monthly Payroll: $${employeeInfo.reduce((sum, e) => sum + e.monthlySalary, 0).toLocaleString()}`);
-    console.log(`Total Annual Payroll: $${employeeInfo.reduce((sum, e) => sum + e.annualSalary, 0).toLocaleString()}`);
-    console.log();
+  fs.writeFileSync(
+    path.join(process.cwd(), "employees.json"),
+    JSON.stringify(
+      {
+        network: hre.network.name,
+        payrollAddress,
+        admin: admin.address,
+        addedAt: new Date().toISOString(),
+        employees: added,
+      },
+      null,
+      2
+    )
+  );
 
-    // Get active employee count from contract
-    const activeCount = await payroll.getActiveEmployeeCount();
-    console.log(`Active Employees (on-chain): ${activeCount.toString()}`);
-    console.log();
+  const activeCount = await payroll.getActiveEmployeeCount();
 
-    console.log("Employee info saved to employees.json");
-    console.log();
-    console.log("Next step: Run payroll");
-    console.log("  npx hardhat run scripts/runPayroll.js --network", hre.network.name);
-    console.log();
+  console.log("===========================================");
+  console.log("Summary");
+  console.log("===========================================");
+  console.log(`Employees added in this run: ${added.length}`);
+  console.log(`Active employees on-chain:   ${activeCount}`);
+  console.log("Saved details to employees.json");
 }
 
 main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("\n❌ addEmployees failed:", err.message || err);
+    process.exit(1);
+  });

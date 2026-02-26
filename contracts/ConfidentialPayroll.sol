@@ -134,6 +134,7 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
     event SalaryMinted(address indexed employee, uint256 indexed runId, uint256 timestamp);
     event DecryptionRequested(uint256 indexed requestId, address indexed requester);
     event SalaryDecrypted(uint256 indexed requestId, address indexed employee);
+    event SalaryAccessAuthorized(address indexed employee, address indexed grantee);
     event SystemDeployed(address payToken, address equityOracle);
 
     // =========================================================================
@@ -155,7 +156,7 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
         );
 
         // Deploy equity oracle (magic feature)
-        equityOracle = new ConfidentialEquityOracle(address(this));
+        equityOracle = new ConfidentialEquityOracle(address(this), msg.sender);
 
         _initializeTaxBrackets();
 
@@ -248,6 +249,7 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
         // ACL: employee can always decrypt their own salary
         TFHE.allow(salary,                             address(this));
         TFHE.allow(salary,                             _employee);
+        TFHE.allow(salary,                             address(equityOracle));
         TFHE.allow(employees[_employee].bonus,         address(this));
         TFHE.allow(employees[_employee].deductions,    address(this));
         TFHE.allow(employees[_employee].netPayLatest,  address(this));
@@ -275,6 +277,7 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
 
         TFHE.allow(newSalary, address(this));
         TFHE.allow(newSalary, _employee);
+        TFHE.allow(newSalary, address(equityOracle));
 
         emit EmployeeUpdated(_employee, block.timestamp);
     }
@@ -618,6 +621,19 @@ contract ConfidentialPayroll is AccessControl, ReentrancyGuard, GatewayCaller {
     // =========================================================================
     // Employee Self-Service
     // =========================================================================
+
+    /**
+     * @notice Employee authorizes another contract/account to read their encrypted salary handle.
+     * @dev Useful for confidential integrations such as payslip or equity proofs.
+     */
+    function authorizeSalaryAccess(address grantee) external {
+        require(employees[msg.sender].isActive, "Payroll: not an employee");
+        require(grantee != address(0), "Payroll: zero address");
+
+        TFHE.allow(employees[msg.sender].monthlySalary, grantee);
+
+        emit SalaryAccessAuthorized(msg.sender, grantee);
+    }
 
     /**
      * @notice Employee triggers decryption of their own salary via Zama Gateway.
