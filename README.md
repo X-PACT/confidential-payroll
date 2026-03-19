@@ -148,3 +148,10 @@ See [SECURITY.md](./SECURITY.md) for disclosure guidance and the current analysi
 - [FHE Operations](./docs/FHE_OPERATIONS.md)
 - [Payslip Flow](./docs/PAYSLIP.md)
 - [Security Policy](./SECURITY.md)
+- [Submission Cover Note](./docs/COVER_NOTE.md)
+- [Judge Path](./docs/JUDGE_PATH.md)
+- [Demo Video Script](./docs/DEMO_VIDEO.md)
+
+## Contact
+
+- Discord: `xpactprotocol`
