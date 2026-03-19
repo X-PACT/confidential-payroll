@@ -164,4 +164,8 @@ See [SECURITY.md](./SECURITY.md) for disclosure guidance and the current analysi
 
 ## Contact
 
+- Email: [fahd.kotb@tuta.io](mailto:fahd.kotb@tuta.io)
+- Email: [i.kotb@proton.me](mailto:i.kotb@proton.me)
+- Email: [eslamkotb.fmt@gmail.com](mailto:eslamkotb.fmt@gmail.com)
+- WhatsApp: [00201124030209](https://wa.me/201124030209)
 - Discord: `xpactprotocol`
