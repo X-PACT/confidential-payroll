@@ -19,6 +19,8 @@ We also tightened the repository for review. Contract logic is de-duplicated whe
 
 Thank you for reviewing the project.
 
+Demo video: `docs/assets/confidential-payroll-demo.mp4`
+
 Project contacts:
 
 - [fahd.kotb@tuta.io](mailto:fahd.kotb@tuta.io)

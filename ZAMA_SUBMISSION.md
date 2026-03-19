@@ -96,6 +96,8 @@ The frontend is a Vue-based console at `frontend/index.html`. It is wired for:
 
 It defaults to the published Sepolia contract addresses so judges can use the live deployment without editing configuration first.
 
+Demo video: `docs/assets/confidential-payroll-demo.mp4`
+
 ## Practical Flow For Judges
 
 1. Open the frontend.
@@ -110,6 +112,7 @@ It defaults to the published Sepolia contract addresses so judges can use the li
 - `docs/JUDGE_PATH.md` for the shortest high-signal review flow
 - `docs/COVER_NOTE.md` for a concise judge-facing project summary
 - `docs/DEMO_VIDEO.md` for a 60-90 second walkthrough script
+- `docs/assets/confidential-payroll-demo.mp4` for a rendered demo video inside the repository
 - `docs/assets/frontend-console-preview.svg` for a clean frontend preview used in the README
 
 ## Notable Engineering Choices
