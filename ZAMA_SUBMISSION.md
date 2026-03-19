@@ -1,5 +1,7 @@
 # Zama Submission: Confidential Payroll
 
+Watch demo first: `docs/assets/confidential-payroll-demo.mp4`
+
 ## Project Snapshot
 
 - Project: `ConfidentialPayroll`
