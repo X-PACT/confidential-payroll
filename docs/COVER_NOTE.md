@@ -18,3 +18,5 @@ The most important design choice is not simply that salaries are encrypted. It i
 We also tightened the repository for review. Contract logic is de-duplicated where it matters, the frontend does not pretend unsupported automation exists, and the documentation tracks the actual deployed system.
 
 Thank you for reviewing the project.
+
+Project contact on Discord: `xpactprotocol`

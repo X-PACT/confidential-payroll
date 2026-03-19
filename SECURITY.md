@@ -12,6 +12,8 @@ Email the maintainers or the competition submission contact with:
 
 If the issue is time-sensitive, say so clearly in the subject line.
 
+For direct coordination during judging or security review, the project contact on Discord is `xpactprotocol`.
+
 ## Scope
 
 This repo contains three security-sensitive layers:
