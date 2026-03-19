@@ -19,4 +19,10 @@ We also tightened the repository for review. Contract logic is de-duplicated whe
 
 Thank you for reviewing the project.
 
-Project contact on Discord: `xpactprotocol`
+Project contacts:
+
+- [fahd.kotb@tuta.io](mailto:fahd.kotb@tuta.io)
+- [i.kotb@proton.me](mailto:i.kotb@proton.me)
+- [eslamkotb.fmt@gmail.com](mailto:eslamkotb.fmt@gmail.com)
+- WhatsApp: [00201124030209](https://wa.me/201124030209)
+- Discord: `xpactprotocol`

@@ -12,7 +12,13 @@ Email the maintainers or the competition submission contact with:
 
 If the issue is time-sensitive, say so clearly in the subject line.
 
-For direct coordination during judging or security review, the project contact on Discord is `xpactprotocol`.
+For direct coordination during judging or security review, use one of these channels:
+
+- [fahd.kotb@tuta.io](mailto:fahd.kotb@tuta.io)
+- [i.kotb@proton.me](mailto:i.kotb@proton.me)
+- [eslamkotb.fmt@gmail.com](mailto:eslamkotb.fmt@gmail.com)
+- WhatsApp: [00201124030209](https://wa.me/201124030209)
+- Discord: `xpactprotocol`
 
 ## Scope
 
