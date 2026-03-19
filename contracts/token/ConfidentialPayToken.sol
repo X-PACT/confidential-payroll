@@ -234,7 +234,7 @@ contract ConfidentialPayToken is IERC7984, ERC165, AccessControl, ReentrancyGuar
     /**
      * @notice Burn encrypted `amount` from `from`. Called on redemption.
      */
-    function burn(address from, euint64 amount) external onlyRole(BURNER_ROLE) {
+    function burn(address from, euint64 amount) external onlyRole(BURNER_ROLE) returns (euint64 burnedAmount) {
         require(from != address(0), "CPT: burn from zero address");
 
         // Decrease balance (FHE subtraction — underflow-safe via FHE min selection)
@@ -247,6 +247,7 @@ contract ConfidentialPayToken is IERC7984, ERC165, AccessControl, ReentrancyGuar
         TFHE.allow(_totalSupply,    address(this));
 
         emit ConfidentialTransfer(from, address(0));
+        return burnAmt;
     }
 
     // =========================================================================

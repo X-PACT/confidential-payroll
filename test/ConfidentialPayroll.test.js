@@ -3,6 +3,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 const ZERO_EINPUT = `0x${"0".repeat(64)}`;
+const ONE_DAY = 24 * 60 * 60;
 
 describe("ConfidentialPayroll", function () {
   let payroll;
@@ -24,8 +25,14 @@ describe("ConfidentialPayroll", function () {
     payToken = await ethers.getContractAt("ConfidentialPayToken", tokenAddress);
     equityOracle = await ethers.getContractAt("ConfidentialEquityOracle", oracleAddress);
 
-    await payroll.connect(admin).grantRole(await payroll.PAYROLL_MANAGER_ROLE(), manager.address);
-    await payroll.connect(admin).grantRole(await payroll.AUDITOR_ROLE(), auditor.address);
+    await payroll.connect(admin).grantOperationalRole(
+      await payroll.PAYROLL_MANAGER_ROLE(),
+      manager.address
+    );
+    await payroll.connect(admin).grantOperationalRole(
+      await payroll.AUDITOR_ROLE(),
+      auditor.address
+    );
   });
 
   it("deploys token and oracle addresses", async function () {
@@ -96,7 +103,7 @@ describe("ConfidentialPayroll", function () {
       "Payroll: invalid frequency"
     );
 
-    await payroll.connect(admin).setPayrollFrequency(7 * 24 * 60 * 60);
+    await payroll.connect(admin).setPayrollFrequency(7 * ONE_DAY);
     expect(await payroll.payrollFrequency()).to.equal(7n * 24n * 60n * 60n);
   });
 
@@ -110,4 +117,109 @@ describe("ConfidentialPayroll", function () {
     expect(auditHash).to.equal(ethers.ZeroHash);
     expect(isFinalized).to.equal(false);
   });
+
+  it("updates tax brackets and rejects malformed bracket arrays", async function () {
+    await expect(
+      payroll.connect(admin).setTaxBrackets(
+        [50_000n * 1_000_000n, 100_000n * 1_000_000n],
+        [1000]
+      )
+    ).to.be.revertedWith("Payroll: bracket length mismatch");
+
+    await expect(
+      payroll.connect(admin).setTaxBrackets(
+        [100_000n * 1_000_000n, 50_000n * 1_000_000n, BigInt("18446744073709551615")],
+        [1000, 2000, 3000]
+      )
+    ).to.be.revertedWith("Payroll: thresholds not ascending");
+
+    await expect(
+      payroll.connect(admin).setTaxBrackets(
+        [50_000n * 1_000_000n, BigInt("18446744073709551615")],
+        [1000, 4000]
+      )
+    ).to.be.revertedWith("Payroll: unsupported tax rate");
+
+    await expect(
+      payroll.connect(admin).setTaxBrackets(
+        [60_000n * 1_000_000n, BigInt("18446744073709551615")],
+        [1000, 3000]
+      )
+    )
+      .to.emit(payroll, "TaxBracketsUpdated")
+      .withArgs(2, anyValue);
+
+    const firstBracket = await payroll.taxBrackets(0);
+    const secondBracket = await payroll.taxBrackets(1);
+
+    expect(firstBracket.threshold).to.equal(60_000n * 1_000_000n);
+    expect(firstBracket.rate).to.equal(1000);
+    expect(secondBracket.threshold).to.equal(BigInt("18446744073709551615"));
+    expect(secondBracket.rate).to.equal(3000);
+  });
+
+  it("updates base currency and exchange rate", async function () {
+    await expect(payroll.connect(admin).setBaseCurrency(ethers.encodeBytes32String("EUR"), 9200))
+      .to.emit(payroll, "BaseCurrencyUpdated")
+      .withArgs(ethers.encodeBytes32String("EUR"), 9200, anyValue);
+
+    expect(await payroll.baseCurrency()).to.equal(ethers.encodeBytes32String("EUR"));
+    expect(await payroll.exchangeRateBps()).to.equal(9200);
+    expect(await payroll.convertReserveToCpt(1_000_000)).to.equal(920_000);
+    expect(await payroll.convertCptToReserve(920_000)).to.equal(1_000_000);
+  });
+
+  it("emits role-change events for operational role management", async function () {
+    await expect(
+      payroll.connect(admin).grantOperationalRole(await payroll.AUDITOR_ROLE(), outsider.address)
+    )
+      .to.emit(payroll, "RoleUpdated")
+      .withArgs(await payroll.AUDITOR_ROLE(), outsider.address, admin.address, true);
+
+    expect(await payroll.hasRole(await payroll.AUDITOR_ROLE(), outsider.address)).to.equal(true);
+
+    await expect(
+      payroll.connect(admin).revokeOperationalRole(await payroll.AUDITOR_ROLE(), outsider.address)
+    )
+      .to.emit(payroll, "RoleUpdated")
+      .withArgs(await payroll.AUDITOR_ROLE(), outsider.address, admin.address, false);
+
+    expect(await payroll.hasRole(await payroll.AUDITOR_ROLE(), outsider.address)).to.equal(false);
+  });
+
+  it("supports reserve asset configuration and blocks redemption without reserves", async function () {
+    await expect(payroll.connect(admin).setReserveAsset(outsider.address, true))
+      .to.emit(payroll, "ReserveAssetUpdated")
+      .withArgs(outsider.address, true, anyValue);
+
+    expect(await payroll.supportedReserveAssets(outsider.address)).to.equal(true);
+
+    await expect(
+      payroll
+        .connect(outsider)
+        .requestSalaryTokenRedemption(ethers.ZeroAddress, ethers.parseEther("1"), outsider.address)
+    ).to.be.revertedWith("Payroll: reserve empty");
+  });
+
+  it("validates ETH reserve deposit inputs before minting", async function () {
+    const reserveAmount = ethers.parseEther("1");
+
+    await expect(
+      payroll
+        .connect(outsider)
+        .depositSalaryTokenReserve(ethers.ZeroAddress, outsider.address, reserveAmount, {
+          value: reserveAmount,
+        })
+    ).to.be.revertedWithCustomError(payroll, "AccessControlUnauthorizedAccount");
+
+    await expect(
+      payroll
+        .connect(admin)
+        .depositSalaryTokenReserve(ethers.ZeroAddress, outsider.address, reserveAmount, {
+          value: reserveAmount - 1n,
+        })
+    ).to.be.revertedWith("Payroll: ETH amount mismatch");
+  });
 });
+
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
