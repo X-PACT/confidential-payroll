@@ -8,6 +8,8 @@ Live frontend: `https://confidential-payroll-henna.vercel.app/frontend`
 
 ![Confidential Payroll frontend console](./docs/assets/frontend-console-preview.svg)
 
+Demo video: [confidential-payroll-demo.mp4](./docs/assets/confidential-payroll-demo.mp4)
+
 The current codebase is organized around five folders that matter in practice:
 
 - `contracts/` for the Solidity system.
