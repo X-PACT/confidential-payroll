@@ -1,304 +1,138 @@
-# 🔐 ConfidentialPayroll v2 — Privacy-Preserving Payroll on Zama fhEVM
+# Confidential Payroll
 
-<p align="center">
-  <a href="https://confidential-payroll-henna.vercel.app/" target="_blank">
-    <img src="https://img.shields.io/badge/LIVE_DEMO-VERCEL-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Live Demo">
-  </a>
-  <a href="https://x-pact.github.io/confidential-payroll/" target="_blank">
-    <img src="https://img.shields.io/badge/FALLBACK-GITHUB_PAGES-24292f?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Pages Fallback">
-  </a>
-</p>
+Confidential Payroll is a Zama fhEVM submission built around a real workplace problem. Salaries, bonuses, deductions, and payroll outputs stay encrypted on-chain, while the rest of the system still behaves like software an operations team could actually use: admins manage roles, treasury teams fund salary liquidity, employees request payslips, and regulators can verify compliance claims without prying into individual compensation.
 
-```text
-┌────────────────────────── LIVE FRONTEND SCREEN ──────────────────────────┐
-│ STATUS: ONLINE (Vercel primary / GitHub Pages fallback)                  │
-│ URL:    https://confidential-payroll-henna.vercel.app/                   │
-└───────────────────────────────────────────────────────────────────────────┘
-```
+The current codebase is organized around five folders that matter in practice:
 
-> Built for the Zama Developer Program using fhEVM + ERC-7984 + ERC-5192
+- `contracts/` for the Solidity system.
+- `scripts/` for deployment and demo flows.
+- `frontend/` for the Vue-based operator console.
+- `docs/` for focused walkthroughs.
+- `test/` for Hardhat coverage.
 
-**Problem:** Traditional payroll systems expose sensitive salary data, creating privacy risks and compliance challenges. Blockchain payroll makes it worse — everything is public.
+## Sepolia Deployment
 
-**Solution:** Complete on-chain payroll with **zero information leakage** using Zama's Fully Homomorphic Encryption. Every salary, bonus, and tax calculation happens on encrypted data.
+The repository is aligned to one published Sepolia deployment:
 
----
+| Contract | Address |
+| --- | --- |
+| ConfidentialPayroll | `0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF` |
+| ConfidentialPayToken | `0x861d347672E3B58Eea899305BDD630EA2A6442a0` |
+| ConfidentialEquityOracle | `0xe9F6209156dE521334Bd56eAf9063Af2882216B3` |
+| ConfidentialPayslip | `0xbF160BC0A4C610E8134eAbd3cd1a1a9608d534aC` |
 
-## 🎯 Key Innovation
+The frontend opens with those addresses prefilled so reviewers can use the live deployment immediately.
 
-What this project demonstrates in practice:
+## What Changed
 
-- Employers can run payroll without seeing individual salaries.
-- Employees can verify payments and request verifiable payslips without disclosing exact amounts.
-- Auditors and regulators can verify compliance through encrypted proofs.
-- Tax is computed with branchless FHE logic using `TFHE.min()`, `TFHE.select()`, and `TFHE.shr()`.
-- Salaries are paid on-chain through an ERC-7984 confidential token.
-- Payslips are issued as ERC-5192 soulbound attestations for real-world checks.
+This final pass focused on making the repo read like a serious submission and not a rough internal workbench:
 
-Plaintext salary remains visible only to the employee.
+- Payroll processing now goes through a shared internal helper instead of keeping the `runPayroll()` and `batchRunPayroll()` logic manually in sync.
+- Tax brackets are configurable through `setTaxBrackets()` under `ADMIN_ROLE`.
+- CPT now has reserve-backed treasury hooks in the payroll contract so admins can fund confidential salary liquidity and process redemption requests against ETH or approved ERC-20 reserves.
+- Multi-currency support is explicit: admins set a `baseCurrency` and a plaintext `exchangeRateBps`, and reserve-backed CPT minting uses that rate.
+- The oracle now supports aggregate-focused claims, including department-average and gender-pay-gap checks, using encrypted aggregate totals plus shift-based normalization that stays compatible with fhEVM v0.6.
+- Role updates emit a dedicated `RoleUpdated` event in addition to OpenZeppelin’s native role events.
+- The frontend is consolidated into one polished console in `frontend/index.html`. The duplicate HTML demo is gone.
 
----
+## Why The Tax Logic Looks Different
 
-## 🏗️ Architecture
+The repo keeps its tax path branchless for a simple reason: decrypting inside the tax loop would leak salary information and would not work on the real gateway-backed flow. fhEVM v0.6 also removed the generic encrypted `mul` and `div` route this project originally relied on.
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│              ConfidentialPayroll v2 (Main Contract)                  │
-│                                                                        │
-│  Encrypted State (euint64)      FHE Operations                       │
-│  • monthlySalary                TFHE.add / sub / min / shr           │
-│  • bonus                        TFHE.gt / lt / ge / le               │
-│  • deductions                   TFHE.select / and / or               │
-│  • netPayLatest                 (no TFHE.decrypt on-chain!)          │
-│                                                                        │
-│  ConfidentialPayToken (ERC-7984)   ConfidentialEquityOracle          │
-│  Encrypted salary disbursement      FHE pay equity certificates       │
-│                                                                        │
-│  ConfidentialPayslip (ERC-5192)                                      │
-│  "My salary is between $5k–$20k" proved without revealing exact amt  │
-└──────────────────────────────────────────────────────────────────────┘
-```
+So the implementation uses:
 
----
+- `TFHE.min()` to cap each bracket.
+- `TFHE.select()` to stay branchless.
+- `TFHE.shr()` to approximate the supported public tax rates.
 
-## 🚀 Quick Start
+That is not just a clever trick for the judges. It is the reason the contract can stay privacy-preserving and still compile against the actual library version used here.
+
+## Quick Start
 
 ```bash
 npm install
-cp .env.example .env
-# Add your PRIVATE_KEY to .env
-
-# Deploy all contracts
-npx hardhat run scripts/deploy.js --network zama-sepolia
-
-# Run demo
-npm run add-employees
-npm run run-payroll
-npm run request-payslip
+npx hardhat compile
+npx hardhat test
 ```
 
----
-
-## 🎥 Demo Page
-
-- Interactive demo page: [`frontend/demo.html`](./frontend/demo.html)
-- Primary live frontend URL: `https://confidential-payroll-henna.vercel.app/`
-- Fallback frontend URL: `https://x-pact.github.io/confidential-payroll/`
-- Production entry file: [`index.html`](./index.html)
-- GitHub Pages marker: [`.nojekyll`](/home/x-pact/confidential-payroll/.nojekyll)
-- Vercel configuration: [`vercel.json`](./vercel.json)
-- Sync source demo into production entry: `npm run sync:demo`
-- One-command Vercel deploy: `npm run deploy:vercel`
-- Launch, listing, and acquisition copy: [`LAUNCH_KIT.md`](./LAUNCH_KIT.md)
-- Repository link: `https://github.com/X-PACT/confidential-payroll/blob/master/frontend/demo.html`
-- Local preview:
+To preview the frontend locally:
 
 ```bash
-cd frontend
-python3 -m http.server 8080
-# open http://127.0.0.1:8080/demo.html
+npm run frontend:serve
 ```
 
----
+Then open `http://127.0.0.1:8080`.
 
-## 💡 Core Features
+## Judge Demo Flow
 
-### 1. Encrypted Salary Management
+If you want the shortest credible review path:
 
-```solidity
-function addEmployee(
-    address _employee,
-    einput _encryptedSalary,   // Encrypted client-side via fhevm-js
-    bytes calldata inputProof,  // ZK proof binding ciphertext to sender
-    string calldata _encryptedPersonalData,
-    uint8 _department,
-    uint8 _level,
-    uint8 _gender
-) external onlyRole(ADMIN_ROLE);
-```
+1. Open `frontend/index.html` through the local static server or the hosted deployment.
+2. Confirm the Sepolia contract addresses shown in the UI.
+3. Connect a Sepolia wallet.
+4. Review the add-employee flow to see how encrypted handles and proofs enter the system.
+5. Trigger payroll, an equity certificate request, or a payslip request from an authorized account.
+6. Use Etherscan and the UI’s gateway-progress panel to inspect the on-chain flow.
 
-### 2. Branchless FHE Tax Calculation (The Critical Fix from v1)
+## Deployment Notes
 
-v1 bug: calling TFHE.decrypt() inside a tax loop — this exposes plaintext salary data on-chain,
-breaks the FHE confidentiality model, and fails on real Zama Sepolia.
+This cleanup pass did not redeploy anything.
 
-v2 is fully branchless using TFHE.min(), TFHE.select(), and TFHE.shr():
+If you do need to redeploy:
 
-```solidity
-function _calculateTax(euint64 grossPay) internal returns (euint64) {
-    uint64 THRESHOLD_50K  = 50_000 * 1e6;
-    uint64 THRESHOLD_100K = 100_000 * 1e6;
+1. Copy `.env.example` to `.env`.
+2. Fill in `PRIVATE_KEY` and the Sepolia RPC settings.
+3. Run `npm run deploy:zama`.
 
-    // Bracket 1: 0 – $50k at ~10% (bit-shift: 1/8 - 1/32 = 9.375%)
-    euint64 bAmt1 = TFHE.min(grossPay, TFHE.asEuint64(THRESHOLD_50K));
-    euint64 bTax1 = TFHE.sub(TFHE.shr(bAmt1, 3), TFHE.shr(bAmt1, 5));
+The deploy script still writes `.env.deployed` and `deployment.json` for the helper scripts and frontend.
 
-    // Bracket 2: $50k – $100k at ~20% (3/16 = 18.75%)
-    euint64 capped2  = TFHE.min(grossPay, TFHE.asEuint64(THRESHOLD_100K));
-    ebool   above50k = TFHE.gt(capped2, TFHE.asEuint64(THRESHOLD_50K));
-    euint64 bAmt2    = TFHE.select(above50k,
-                         TFHE.sub(capped2, TFHE.asEuint64(THRESHOLD_50K)),
-                         TFHE.asEuint64(0));
-    euint64 bTax2 = TFHE.sub(TFHE.shr(bAmt2, 2), TFHE.shr(bAmt2, 4));
+## Contract Highlights
 
-    // Bracket 3: $100k+ at ~30% (1/2 - 1/4 - 1/16 = 31.25%)
-    ebool   above100k = TFHE.gt(grossPay, TFHE.asEuint64(THRESHOLD_100K));
-    euint64 bAmt3     = TFHE.select(above100k,
-                         TFHE.sub(grossPay, TFHE.asEuint64(THRESHOLD_100K)),
-                         TFHE.asEuint64(0));
-    euint64 bTax3 = TFHE.sub(
-        TFHE.sub(TFHE.shr(bAmt3, 1), TFHE.shr(bAmt3, 2)),
-        TFHE.shr(bAmt3, 4));
+### `ConfidentialPayroll.sol`
 
-    return TFHE.add(TFHE.add(bTax1, bTax2), bTax3); // Still encrypted!
-}
-```
+- Shared `_processEmployeePayroll()` helper for single-run and batch processing.
+- `setTaxBrackets()` for configurable brackets with validation.
+- `setBaseCurrency()` and `setReserveAsset()` for treasury configuration.
+- `depositSalaryTokenReserve()` and `requestSalaryTokenRedemption()` for reserve-backed CPT operations.
+- `grantOperationalRole()`, `revokeOperationalRole()`, `grantAdminRole()`, and `revokeAdminRole()` for clearer role workflows.
 
-Note: TFHE.mul() and TFHE.div() were removed from fhEVM 0.6. Tax rates use TFHE.shr()
-approximations (9.375%, 18.75%, 31.25%) — sufficient for a production demo and compatible
-with the actual Zama coprocessor on Sepolia.
+### `ConfidentialEquityOracle.sol`
 
-### 3. Chunked Batch Payroll
+- Existing employee-focused claim types remain in place.
+- New aggregate claims:
+  - `AVERAGE_DEPARTMENT_SALARY`
+  - `GENDER_PAY_GAP`
+- HR can publish encrypted department and gender aggregate totals plus normalization metadata used by the oracle.
 
-```solidity
-uint256 runId = payroll.initPayrollRun();           // Create run with shared audit trail
-payroll.batchRunPayroll(runId, 0, 10);              // Process employees 0–9
-payroll.batchRunPayroll(runId, 10, 20);             // Process employees 10–19
-payroll.finalizePayrollRun(runId);                  // Seal and emit audit hash
-```
+### `ConfidentialPayslip.sol`
 
-Gas measured on Zama Sepolia: ~240k/employee, ~2.4M per batch of 10.
+- Payslip verification stays verifier-scoped.
+- Payroll authorization is now tracked explicitly in contract state.
 
-### 4. ERC-7984 Confidential Salary Token (CPT)
+## Frontend
 
-All employee balances are FHE-encrypted. Salary is disbursed as CPT tokens:
+The frontend is intentionally direct. It is a Vue console for judges and operator review, not a generic dashboard template. It covers:
 
-```solidity
-payToken.mint(addr, netPay);  // netPay is euint64 — nobody sees the amount
+- employee onboarding
+- payroll execution
+- equity certificate requests
+- payslip requests
+- payslip verification
+- gateway progress tracking for async FHE flows
 
-// Employee decrypts their own balance via Gateway
-bytes32 handle = payToken.confidentialBalanceOf(employee);
-```
+The live forms accept encrypted handles and proofs because that matches how the contracts work. In other words, the UI does not pretend plaintext salary input is safe when it is not.
 
-### 5. ConfidentialEquityOracle — Pay Equity Certificates
+## Security And Analysis
 
-Proves EU Pay Transparency Directive compliance without revealing any salary:
+- `npx hardhat test` passes.
+- `npm audit` currently reports transitive dependency issues inherited from the older `hardhat`, `fhevm`, and `fhevmjs` stack pinned by this project.
+- Slither was installed in a local virtual environment and invoked, but the full Hardhat-based analysis timed out in this environment before returning detector output. The repo now includes a `slither` script so the same check can be rerun in a roomier CI runner.
 
-```solidity
-// "Prove Alice earns above department median" — without revealing Alice's salary
-equityOracle.requestEquityCertificate(alice, ClaimType.ABOVE_DEPARTMENT_MEDIAN, encSalary, auditRef);
-// Gateway decrypts boolean only. Certificate: "Alice:above_median:true"
-```
+See [SECURITY.md](./SECURITY.md) for disclosure guidance and the current analysis summary.
 
-### 6. ConfidentialPayslip — ERC-5192 Soulbound Verifiable Payslips
+## Useful Docs
 
-```solidity
-// Prove salary is between $5k–$20k to a bank — without revealing exact amount
-payslip.requestPayslip(
-    bankAddress,
-    PayslipPurpose.BANK_LOAN,
-    ProofType.RANGE_PROOF,
-    5_000 * 1e6, 20_000 * 1e6,
-    aliceEncryptedSalary,
-    runId, auditHash, "Software Engineer"
-);
-// Gateway decrypts boolean: "salary in [5k,20k]: true"
-// Soulbound NFT minted — bank verifies, exact salary stays private forever
-```
-
----
-
-## 📊 FHE Operations (fhEVM 0.6)
-
-| Operation | Status | Used For |
-|-----------|--------|----------|
-| TFHE.add() | ✅ | salary + bonus, aggregate totals |
-| TFHE.sub() | ✅ | gross - deductions |
-| TFHE.min() | ✅ | overflow guard, bracket capping |
-| TFHE.shr(x, n) | ✅ scalar | tax rate approximation |
-| TFHE.gt/lt/ge/le() | ✅ | bracket comparisons |
-| TFHE.select() | ✅ | branchless conditionals |
-| TFHE.and/or() | ✅ | compound proofs |
-| TFHE.mul() | ❌ removed 0.6 | replaced by shr |
-| TFHE.div() | ❌ removed 0.6 | replaced by shr |
-
----
-
-## 💰 Gas Analysis (Zama Sepolia Measured)
-
-| Operation | Gas | FHE Ops |
-|-----------|-----|---------|
-| addEmployee() | ~350k | 4 |
-| addConditionalBonus() | ~480k | 12 |
-| initPayrollRun() | ~180k | 3 |
-| batchRunPayroll() per 10 emp | ~2.4M | 60 |
-| _calculateTax() | ~200k | 9 |
-| requestEquityCertificate() | ~150k | 1 |
-| requestPayslip() | ~120k | 2 |
-
----
-
-## 🔐 Security
-
-- ✅ ReentrancyGuard on all state-changing functions
-- ✅ OpenZeppelin AccessControl (ADMIN, PAYROLL_MANAGER, AUDITOR roles)
-- ✅ TFHE.allow() after every FHE state update
-- ✅ TFHE.min() overflow guard on all subtractions
-- ✅ onlyGateway on all decryption callbacks
-- ✅ Soulbound payslips (non-transferable, employee-invalidatable)
-
----
-
-## 🛠️ Tech Stack
-
-- **Solidity:** ^0.8.24, viaIR: true
-- **FHE:** Zama fhEVM v0.6
-- **Framework:** Hardhat
-- **Access Control:** OpenZeppelin v5
-- **Frontend:** fhevm-js
-- **Network:** Zama Sepolia (chainId: 11155111)
-
----
-
-## 🚀 Launch Kit
-
-- Vercel-ready static deployment config is included in [`vercel.json`](./vercel.json)
-- Multi-platform launch copy is included in [`LAUNCH_KIT.md`](./LAUNCH_KIT.md)
-- Production hosting is standardized on the repository root
-- Recommended launch order:
-  1. GitHub Pages or Vercel production demo
-  2. DoraHacks project page
-  3. Product Hunt launch
-  4. Strategic buyer outreach or acquisition marketplace listing
-
----
-
-## 🌐 Official Zama Channels
-
-Use only official channels listed by Zama:
-
-- Community channels hub: https://www.zama.ai/community-channels
-- Developer forum: https://community.zama.ai
-- Discord: https://discord.gg/zama
-- X: https://x.com/zama
-- Telegram: https://t.me/zama_on_telegram
-- LinkedIn: https://www.linkedin.com/company/34914422
-- YouTube: https://www.youtube.com/@zama_fhe
-- Reddit: https://www.reddit.com/r/zama/
-- Farcaster: https://farcaster.xyz/zama
-- Documentation: https://docs.zama.ai
-- Zama GitHub: https://github.com/zama-ai
-
----
-
-## 📬 Contact
-
-- Maintainer: Fahd Kotb
-- Email: fahd.kotb@tuta.io
-- Project repository: https://github.com/X-PACT/confidential-payroll
-
----
-
-## 📜 License
-
-MIT License — Built for the Zama Developer Program
+- [Architecture](./docs/ARCHITECTURE.md)
+- [FHE Operations](./docs/FHE_OPERATIONS.md)
+- [Payslip Flow](./docs/PAYSLIP.md)
+- [Security Policy](./SECURITY.md)

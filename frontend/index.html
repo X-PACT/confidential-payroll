@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confidential Payroll Console</title>
+    <meta
+      name="description"
+      content="A polished operations console for Zama confidential payroll demos, equity certificates, and verifiable payslips."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="shell">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow">Zama Competition Console</div>
+            <h1>Private payroll that still feels operational.</h1>
+            <p>
+              This interface is built for judges and developers who want to see the full flow:
+              employee onboarding, confidential payroll runs, equity attestations, and verifiable
+              payslips, all without putting salary balances in public view.
+            </p>
+          </div>
+          <div class="notices">
+            <div v-for="notice in notices" :key="notice.id" class="notice" :class="notice.kind">
+              {{ notice.message }}
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <button class="button-primary" @click="connectWallet" :disabled="busy.connect">
+            {{ busy.connect ? "Connecting..." : wallet.connected ? "Wallet Connected" : "Connect Wallet" }}
+          </button>
+          <button class="button-secondary" @click="requestSalaryDecryption" :disabled="busy.decrypt || !wallet.connected">
+            {{ busy.decrypt ? "Submitting..." : "Request Salary Decryption" }}
+          </button>
+          <span class="muted">
+            {{ wallet.connected ? `Connected account: ${wallet.account}` : "Live calls need MetaMask on Sepolia." }}
+          </span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <strong>Privacy Model</strong>
+            <span>Encrypted salary state, gateway-only decryptions, no public employee balances.</span>
+          </div>
+          <div class="stat">
+            <strong>Competition Hooks</strong>
+            <span>Branchless tax logic, ERC-7984 salary token flows, equity and payslip proofs.</span>
+          </div>
+          <div class="stat">
+            <strong>Operational View</strong>
+            <span>Every gateway workflow exposes progress so reviewers can track async FHE steps.</span>
+          </div>
+        </div>
+
+        <div class="pills">
+          <div class="pill">
+            <strong>Payroll Contract</strong>
+            <span>{{ addresses.payroll }}</span>
+          </div>
+          <div class="pill">
+            <strong>Equity Oracle</strong>
+            <span>{{ addresses.oracle }}</span>
+          </div>
+          <div class="pill">
+            <strong>Payslip Contract</strong>
+            <span>{{ addresses.payslip }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-grid">
+        <article class="panel span-5">
+          <h2>Connection And Addresses</h2>
+          <p>
+            The console opens on the published Sepolia deployment and lets reviewers override any
+            address if they want to point at a local or replacement deployment.
+          </p>
+          <div class="input-grid">
+            <div class="field full">
+              <label for="payroll">Payroll Contract</label>
+              <input id="payroll" v-model="addresses.payroll" @change="persistAddresses" />
+            </div>
+            <div class="field">
+              <label for="oracle">Equity Oracle</label>
+              <input id="oracle" v-model="addresses.oracle" @change="persistAddresses" />
+            </div>
+            <div class="field">
+              <label for="payslip">Payslip Contract</label>
+              <input id="payslip" v-model="addresses.payslip" @change="persistAddresses" />
+            </div>
+          </div>
+        </article>
+
+        <article class="panel span-7">
+          <h2>Gateway Progress</h2>
+          <p>
+            Requests that depend on the Zama gateway move through the same four stages. Transactions
+            settle first, then the encrypted proof waits for the asynchronous callback that reveals
+            only the requested boolean or salary value.
+          </p>
+          <div class="queue" v-if="queue.length">
+            <div class="queue-item" v-for="item in queue" :key="item.id">
+              <strong>{{ item.label }}</strong>
+              <div class="muted">Tx: <code>{{ item.txHash }}</code></div>
+              <div class="muted" v-if="item.requestId">Request ID: <code>{{ item.requestId }}</code></div>
+              <div class="steps">
+                <span
+                  v-for="step in gatewaySteps"
+                  :key="step"
+                  class="step"
+                  :class="{ active: item.status === step || (item.requestId && step === 'Waiting for Gateway callback') }"
+                >
+                  {{ step }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="muted" v-else>No transactions yet. Run one of the actions below to populate the queue.</div>
+        </article>
+
+        <article class="panel span-6">
+          <h2>Add Employee</h2>
+          <p>
+            The contract expects the salary handle and proof generated by `fhevm-js`. This keeps the
+            UI production-aligned instead of sneaking plaintext into an admin form.
+          </p>
+          <div class="input-grid">
+            <div class="field">
+              <label>Employee Wallet</label>
+              <input v-model="addEmployeeForm.employee" />
+            </div>
+            <div class="field">
+              <label>Encrypted Salary Handle</label>
+              <input v-model="addEmployeeForm.encryptedSalary" />
+            </div>
+            <div class="field full">
+              <label>Input Proof</label>
+              <textarea v-model="addEmployeeForm.inputProof"></textarea>
+            </div>
+            <div class="field">
+              <label>Encrypted Personal Data CID</label>
+              <input v-model="addEmployeeForm.personalDataCid" />
+            </div>
+            <div class="field">
+              <label>Department</label>
+              <input type="number" min="1" v-model="addEmployeeForm.department" />
+            </div>
+            <div class="field">
+              <label>Level</label>
+              <input type="number" min="1" max="10" v-model="addEmployeeForm.level" />
+            </div>
+            <div class="field">
+              <label>Gender Marker</label>
+              <select v-model="addEmployeeForm.gender">
+                <option :value="0">Undisclosed</option>
+                <option :value="1">Male</option>
+                <option :value="2">Female</option>
+              </select>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="button-primary" @click="submitAddEmployee" :disabled="busy.addEmployee || !wallet.connected">
+              {{ busy.addEmployee ? "Submitting..." : "Register Employee" }}
+            </button>
+          </div>
+        </article>
+
+        <article class="panel span-6">
+          <h2>Run Payroll</h2>
+          <p>
+            Trigger the encrypted payroll path directly from the UI. This keeps the demo simple for
+            judges while still exercising the same contract entrypoint used by the scripts.
+          </p>
+          <div class="hero-actions">
+            <button class="button-primary" @click="submitRunPayroll" :disabled="busy.runPayroll || !wallet.connected">
+              {{ busy.runPayroll ? "Running..." : "Run Confidential Payroll" }}
+            </button>
+          </div>
+        </article>
+
+        <article class="panel span-6">
+          <h2>Equity Certificates</h2>
+          <p>
+            Request one of the expanded claim types, including department-average and gender-pay-gap
+            checks, without exposing the employee's salary.
+          </p>
+          <div class="input-grid">
+            <div class="field">
+              <label>Employee Wallet</label>
+              <input v-model="equityForm.employee" />
+            </div>
+            <div class="field">
+              <label>Claim Type</label>
+              <select v-model="equityForm.claimType">
+                <option v-for="(label, index) in claimTypes" :key="label" :value="index">{{ label }}</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Encrypted Salary Handle</label>
+              <input v-model="equityForm.encryptedSalary" />
+            </div>
+            <div class="field full">
+              <label>Audit Reference</label>
+              <input v-model="equityForm.auditReference" />
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="button-primary" @click="submitEquityCertificate" :disabled="busy.equity || !wallet.connected">
+              {{ busy.equity ? "Submitting..." : "Request Equity Certificate" }}
+            </button>
+          </div>
+        </article>
+
+        <article class="panel span-6">
+          <h2>Payslip Requests</h2>
+          <p>
+            Generate a verifier-specific proof without disclosing the exact salary. This is the flow
+            that tends to land well with banks, landlords, and compliance reviewers.
+          </p>
+          <div class="input-grid">
+            <div class="field">
+              <label>Verifier</label>
+              <input v-model="payslipForm.verifier" />
+            </div>
+            <div class="field">
+              <label>Purpose</label>
+              <select v-model="payslipForm.purpose">
+                <option v-for="(label, index) in payslipPurposes" :key="label" :value="index">{{ label }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Proof Type</label>
+              <select v-model="payslipForm.proofType">
+                <option v-for="(label, index) in proofTypes" :key="label" :value="index">{{ label }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Run ID</label>
+              <input v-model="payslipForm.runId" />
+            </div>
+            <div class="field full">
+              <label>Encrypted Salary Handle</label>
+              <input v-model="payslipForm.encryptedSalary" />
+            </div>
+            <div class="field">
+              <label>Range Min</label>
+              <input v-model="payslipForm.rangeMin" />
+            </div>
+            <div class="field">
+              <label>Range Max</label>
+              <input v-model="payslipForm.rangeMax" />
+            </div>
+            <div class="field full">
+              <label>Audit Reference</label>
+              <input v-model="payslipForm.auditReference" />
+            </div>
+            <div class="field full">
+              <label>Position Title</label>
+              <input v-model="payslipForm.positionTitle" />
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="button-primary" @click="submitPayslip" :disabled="busy.payslip || !wallet.connected">
+              {{ busy.payslip ? "Submitting..." : "Request Payslip" }}
+            </button>
+          </div>
+        </article>
+
+        <article class="panel span-6">
+          <h2>Verify Payslip</h2>
+          <p>
+            Enter a token ID and read the verifier-safe metadata returned by the payslip contract.
+          </p>
+          <div class="input-grid">
+            <div class="field full">
+              <label>Token ID</label>
+              <input v-model="verifyForm.tokenId" />
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="button-primary" @click="submitVerifyPayslip" :disabled="busy.verify || !wallet.connected">
+              {{ busy.verify ? "Checking..." : "Verify Payslip" }}
+            </button>
+          </div>
+
+          <div v-if="verifyResult" class="verify-card">
+            <dl>
+              <div><dt>Employee</dt><dd>{{ verifyResult.employee }}</dd></div>
+              <div><dt>Employer</dt><dd>{{ verifyResult.employerName }}</dd></div>
+              <div><dt>Title</dt><dd>{{ verifyResult.positionTitle }}</dd></div>
+              <div><dt>Proof Result</dt><dd>{{ verifyResult.proofResult ? "Approved" : "Declined" }}</dd></div>
+              <div><dt>Range</dt><dd>{{ verifyResult.rangeMin }} - {{ verifyResult.rangeMax }}</dd></div>
+              <div><dt>Valid</dt><dd>{{ verifyResult.isValid ? "Yes" : "No" }}</dd></div>
+            </dl>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
