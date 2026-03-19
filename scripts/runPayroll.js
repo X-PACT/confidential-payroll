@@ -109,7 +109,7 @@ async function main() {
   console.log("\n🚀 Executing Payroll Run...");
   console.log(  "   ⚙️  FHE Operations Running:");
   console.log(  "     • Gross = Salary + Bonus              [TFHE.add]");
-  console.log(  "     • Tax   = Progressive brackets        [TFHE.min + TFHE.select + TFHE.mul]");
+  console.log(  "     • Tax   = Progressive brackets        [TFHE.min + TFHE.select + TFHE.shr]");
   console.log(  "     • Net   = Gross - min(deductions, Gross) [TFHE.sub]");
   console.log(  "     • Mint  = ERC-7984 tokens to employees");
   console.log(  "   ⚠️  ALL computations on ENCRYPTED data — no amounts revealed.\n");

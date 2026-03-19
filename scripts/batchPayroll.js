@@ -1,116 +1,88 @@
-/**
- * batchPayroll.js — Run full payroll in gas-bounded chunks
- *
- * Usage:
- *   npx hardhat run scripts/batchPayroll.js --network zama-sepolia
- *
- * This script replaces the old runPayroll.js for large employee sets (15+).
- * For small demos (<10 employees), runPayroll.js still works fine.
- *
- * Design note: we had to redesign this twice. The original version called
- * runPayroll() directly which hit gas limits. The second version split
- * employees into separate runPayroll() calls which broke the audit trail.
- * This version uses initPayrollRun() + batchRunPayroll() + finalize.
- */
-
 const hre = require("hardhat");
-const fs  = require("fs");
+const fs = require("fs");
+const path = require("path");
 
-const CHUNK_SIZE = 10; // 10 employees per tx ≈ 2.4M gas — safe margin
+const CHUNK_SIZE = 10;
+
+function loadDeployment() {
+  const deploymentPath = path.join(process.cwd(), "deployment.json");
+  if (!fs.existsSync(deploymentPath)) {
+    throw new Error("deployment.json not found. Run deploy first.");
+  }
+
+  return JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
+}
 
 async function main() {
-    console.log("=".repeat(50));
-    console.log("Batch Payroll Runner");
-    console.log("=".repeat(50));
-    console.log();
+  console.log("===========================================");
+  console.log("Chunked Payroll Runner");
+  console.log("===========================================\n");
 
-    const deploymentInfo = JSON.parse(fs.readFileSync("./deployment.json", "utf8"));
-    const signers = await hre.ethers.getSigners();
-    if (signers.length === 0) {
-        throw new Error("No signer found. Set PRIVATE_KEY in .env before running this script.");
-    }
-    const deployer = signers[0];
+  const deployment = loadDeployment();
+  const payrollAddress = deployment.contractAddress;
+  if (!payrollAddress) {
+    throw new Error("contractAddress missing in deployment.json");
+  }
 
-    const payroll = await hre.ethers.getContractAt(
-        "ConfidentialPayroll",
-        deploymentInfo.contractAddress,
-        deployer
-    );
+  const signers = await hre.ethers.getSigners();
+  if (signers.length === 0) {
+    throw new Error("No signer found. Set PRIVATE_KEY in .env before running this script.");
+  }
 
-    const activeCount = Number(await payroll.getActiveEmployeeCount());
-    console.log(`Active employees: ${activeCount}`);
+  const manager = signers[0];
+  const payroll = await hre.ethers.getContractAt("ConfidentialPayroll", payrollAddress, manager);
+  const activeCount = Number(await payroll.getActiveEmployeeCount());
 
-    if (activeCount === 0) {
-        console.log("No active employees. Run addEmployees.js first.");
-        return;
-    }
+  console.log(`Network:          ${hre.network.name}`);
+  console.log(`Payroll Contract: ${payrollAddress}`);
+  console.log(`Manager:          ${manager.address}`);
+  console.log(`Active employees: ${activeCount}\n`);
 
-    // Step 1: Initialize the payroll run
-    console.log("\nStep 1: Initializing payroll run...");
-    const initTx     = await payroll.initPayrollRun({ gasLimit: 300_000 });
-    const initReceipt = await initTx.wait();
+  if (activeCount === 0) {
+    console.log("No active employees found. Run addEmployees.js first.");
+    return;
+  }
 
-    // Parse runId from PayrollRunStarted event — or read nextPayrollRunId - 1
-    // (event parsing varies by ethers version so we use the simple approach)
-    const runId = Number(await payroll.nextPayrollRunId()) - 1;
-    console.log(`  Run ID: ${runId}`);
-    console.log(`  Gas used: ${initReceipt.gasUsed.toString()}`);
+  const initTx = await payroll.initPayrollRun({ gasLimit: 300_000 });
+  const initReceipt = await initTx.wait();
+  const runId = Number(await payroll.nextPayrollRunId()) - 1;
 
-    // Step 2: Batch process employees
-    const totalEmployees = (await payroll.employeeList ?
-        // newer ABI exposes length
-        Number(await payroll.getActiveEmployeeCount()) :
-        activeCount);
+  console.log(`Initialized run ${runId}`);
+  console.log(`  tx:       ${initReceipt.hash}`);
+  console.log(`  gas used: ${initReceipt.gasUsed.toString()}\n`);
 
-    const numChunks = Math.ceil(activeCount / CHUNK_SIZE);
-    console.log(`\nStep 2: Processing ${activeCount} employees in ${numChunks} chunk(s) of ${CHUNK_SIZE}...`);
+  const totalChunks = Math.ceil(activeCount / CHUNK_SIZE);
 
-    let processedCount = 0;
-    for (let chunk = 0; chunk < numChunks; chunk++) {
-        const startIdx = chunk * CHUNK_SIZE;
-        // endIdx is exclusive — but we don't know total list length (includes inactive)
-        // so we just pass startIdx + CHUNK_SIZE and let the contract skip inactive
-        const endIdx = Math.min(startIdx + CHUNK_SIZE, activeCount + (chunk * 2)); // rough estimate
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+    const startIndex = chunkIndex * CHUNK_SIZE;
+    const endIndex = Math.min(startIndex + CHUNK_SIZE, activeCount);
 
-        console.log(`\n  Chunk ${chunk + 1}/${numChunks}: employees[${startIdx}...${endIdx})`);
+    console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks}: [${startIndex}, ${endIndex})`);
 
-        try {
-            const batchTx = await payroll.batchRunPayroll(
-                runId,
-                startIdx,
-                endIdx,
-                { gasLimit: 3_000_000 } // 3M gas per chunk — conservative
-            );
-            const batchReceipt = await batchTx.wait();
-            processedCount += (endIdx - startIdx);
-            console.log(`  ✅ Gas used: ${batchReceipt.gasUsed.toString()}`);
-            console.log(`  Tx: ${batchReceipt.hash}`);
-        } catch (err) {
-            console.error(`  ❌ Chunk failed: ${err.message}`);
-            // Don't abort — try next chunk
-        }
-    }
+    const batchTx = await payroll.batchRunPayroll(runId, startIndex, endIndex, {
+      gasLimit: 3_000_000,
+    });
+    const batchReceipt = await batchTx.wait();
 
-    // Step 3: Finalize
-    console.log("\nStep 3: Finalizing payroll run...");
-    const finTx      = await payroll.finalizePayrollRun(runId, { gasLimit: 100_000 });
-    const finReceipt = await finTx.wait();
-    console.log(`  ✅ Finalized. Gas: ${finReceipt.gasUsed.toString()}`);
+    console.log(`  tx:       ${batchReceipt.hash}`);
+    console.log(`  gas used: ${batchReceipt.gasUsed.toString()}\n`);
+  }
 
-    // Read audit hash from contract
-    const runData = await payroll.payrollRuns(runId);
-    console.log(`\n${"=".repeat(50)}`);
-    console.log(`Payroll Run #${runId} Complete`);
-    console.log(`  Timestamp:      ${new Date(Number(runData.timestamp) * 1000).toISOString()}`);
-    console.log(`  Employee count: ${runData.employeeCount.toString()}`);
-    console.log(`  Audit hash:     ${runData.auditHash}`);
-    console.log(`  Finalized:      ${runData.isFinalized}`);
-    console.log(`${"=".repeat(50)}`);
+  const finalizeTx = await payroll.finalizePayrollRun(runId, { gasLimit: 100_000 });
+  const finalizeReceipt = await finalizeTx.wait();
+  const run = await payroll.payrollRuns(runId);
+
+  console.log("Payroll run finalized");
+  console.log(`  tx:             ${finalizeReceipt.hash}`);
+  console.log(`  gas used:       ${finalizeReceipt.gasUsed.toString()}`);
+  console.log(`  processed:      ${run.employeeCount.toString()} employees`);
+  console.log(`  audit hash:     ${run.auditHash}`);
+  console.log(`  finalized flag: ${run.isFinalized}`);
 }
 
 main()
-    .then(() => process.exit(0))
-    .catch(err => {
-        console.error(err);
-        process.exit(1);
-    });
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("\n❌ batchPayroll failed:", error.message || error);
+    process.exit(1);
+  });

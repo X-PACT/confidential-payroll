@@ -134,6 +134,7 @@ contract ConfidentialPayslip is AccessControl, ReentrancyGuard, GatewayCaller {
     mapping(address => uint256[])         public employeePayslips;   // employee → tokenIds
     mapping(address => uint256[])         public verifierPayslips;   // verifier → tokenIds
     mapping(uint256 => PendingPayslip)    private _pendingDecryptions;
+    mapping(address => bool)              public payrollAuthorizedEmployees;
 
     uint256 public nextTokenId = 1;
     uint256 private _nextRequestId = 1;
@@ -175,6 +176,7 @@ contract ConfidentialPayslip is AccessControl, ReentrancyGuard, GatewayCaller {
         address indexed verifier,
         uint256 timestamp
     );
+    event EmployeeAuthorizationUpdated(address indexed employee, bool authorized, uint256 timestamp);
 
     // =========================================================================
     // Constructor
@@ -521,16 +523,13 @@ contract ConfidentialPayslip is AccessControl, ReentrancyGuard, GatewayCaller {
     // =========================================================================
 
     /**
-     * @notice Called by Payroll contract to authorize payslip contract
-     *         to read an employee's encrypted salary for a specific run.
-     * @dev Payroll contract calls TFHE.allow(empSalary, address(payslip))
-     *      before employee calls requestPayslip.
+     * @notice Records that payroll has granted this contract salary-read access
+     *         for the employee's current encrypted payroll data.
      */
     function authorizeForEmployee(address employee) external onlyRole(PAYROLL_ROLE) {
-        // Authorization is handled at FHE ACL level by the Payroll contract.
-        // This function exists as a hook for future extensions.
-        // The actual TFHE.allow() is called in the Payroll contract.
-        emit PayslipRequested(0, employee, address(0), PayslipPurpose.CUSTOM);
+        require(employee != address(0), "Payslip: zero employee");
+        payrollAuthorizedEmployees[employee] = true;
+        emit EmployeeAuthorizationUpdated(employee, true, block.timestamp);
     }
 
     // =========================================================================
