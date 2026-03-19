@@ -2,6 +2,12 @@
 
 Confidential Payroll is a Zama fhEVM submission built around a real workplace problem. Salaries, bonuses, deductions, and payroll outputs stay encrypted on-chain, while the rest of the system still behaves like software an operations team could actually use: admins manage roles, treasury teams fund salary liquidity, employees request payslips, and regulators can verify compliance claims without prying into individual compensation.
 
+## Frontend At A Glance
+
+Live frontend: `https://confidential-payroll-henna.vercel.app/frontend`
+
+![Confidential Payroll frontend console](./docs/assets/frontend-console-preview.svg)
+
 The current codebase is organized around five folders that matter in practice:
 
 - `contracts/` for the Solidity system.
@@ -67,12 +73,18 @@ Then open `http://127.0.0.1:8080`.
 
 If you want the shortest credible review path:
 
-1. Open `frontend/index.html` through the local static server or the hosted deployment.
+1. Open `https://confidential-payroll-henna.vercel.app/frontend`.
 2. Confirm the Sepolia contract addresses shown in the UI.
 3. Connect a Sepolia wallet.
 4. Review the add-employee flow to see how encrypted handles and proofs enter the system.
 5. Trigger payroll, an equity certificate request, or a payslip request from an authorized account.
 6. Use Etherscan and the UI’s gateway-progress panel to inspect the on-chain flow.
+
+For a tighter reviewer handoff:
+
+- [Judge Path](./docs/JUDGE_PATH.md)
+- [Submission Cover Note](./docs/COVER_NOTE.md)
+- [60-90 Second Demo Script](./docs/DEMO_VIDEO.md)
 
 ## Deployment Notes
 

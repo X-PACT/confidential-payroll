@@ -1,0 +1,80 @@
+<svg width="1600" height="960" viewBox="0 0 1600 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="140" y1="80" x2="1460" y2="880" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F0E8"/>
+      <stop offset="0.52" stop-color="#F2E1CC"/>
+      <stop offset="1" stop-color="#D7E4E1"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="240" y1="180" x2="1260" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#183642"/>
+      <stop offset="1" stop-color="#355B66"/>
+    </linearGradient>
+    <filter id="shadow" x="120" y="60" width="1360" height="840" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="28"/>
+      <feGaussianBlur stdDeviation="24"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.07 0 0 0 0 0.11 0 0 0 0 0.16 0 0 0 0.18 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="960" fill="url(#bg)"/>
+  <circle cx="1336" cy="164" r="182" fill="#E4B07A" fill-opacity="0.22"/>
+  <circle cx="212" cy="792" r="214" fill="#A4C6BE" fill-opacity="0.32"/>
+  <g filter="url(#shadow)">
+    <rect x="160" y="96" width="1280" height="760" rx="28" fill="#FCFAF7"/>
+    <rect x="160" y="96" width="1280" height="58" rx="28" fill="#E9E2D8"/>
+    <circle cx="208" cy="125" r="8" fill="#E27D60"/>
+    <circle cx="234" cy="125" r="8" fill="#E8C070"/>
+    <circle cx="260" cy="125" r="8" fill="#6EB397"/>
+    <rect x="320" y="112" width="400" height="26" rx="13" fill="#F8F4EE"/>
+    <text x="344" y="130" fill="#6A6E73" font-family="'Space Grotesk', Arial, sans-serif" font-size="15">https://confidential-payroll-henna.vercel.app/frontend</text>
+
+    <rect x="196" y="182" width="1208" height="218" rx="30" fill="url(#hero)"/>
+    <text x="236" y="226" fill="#E7C98B" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="1.6">ZAMA COMPETITION CONSOLE</text>
+    <text x="236" y="292" fill="#FFF8EF" font-family="'DM Serif Display', Georgia, serif" font-size="56">Private payroll that still feels operational.</text>
+    <text x="236" y="334" fill="#D8E2E6" font-family="'Space Grotesk', Arial, sans-serif" font-size="22">Encrypted salary state, branchless tax logic, verifier-safe payslips, and</text>
+    <text x="236" y="364" fill="#D8E2E6" font-family="'Space Grotesk', Arial, sans-serif" font-size="22">gateway-tracked asynchronous FHE workflows on Sepolia.</text>
+
+    <rect x="1034" y="226" width="148" height="48" rx="24" fill="#F2C57C"/>
+    <text x="1068" y="256" fill="#17323B" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700">Connect</text>
+    <rect x="1196" y="226" width="164" height="48" rx="24" fill="#284B57" stroke="#8BB7C2"/>
+    <text x="1220" y="256" fill="#EEF6F8" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700">Decrypt Salary</text>
+
+    <rect x="236" y="432" width="360" height="86" rx="22" fill="#F6EFE7"/>
+    <text x="262" y="466" fill="#15323D" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700">Payroll Contract</text>
+    <text x="262" y="495" fill="#4F6068" font-family="'Space Grotesk', Arial, sans-serif" font-size="16">0xA1b22e02484E573cb1b4970cA52B7b24c13D20dF</text>
+
+    <rect x="620" y="432" width="360" height="86" rx="22" fill="#F6EFE7"/>
+    <text x="646" y="466" fill="#15323D" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700">Equity Oracle</text>
+    <text x="646" y="495" fill="#4F6068" font-family="'Space Grotesk', Arial, sans-serif" font-size="16">0xe9F6209156dE521334Bd56eAf9063Af2882216B3</text>
+
+    <rect x="1004" y="432" width="360" height="86" rx="22" fill="#F6EFE7"/>
+    <text x="1030" y="466" fill="#15323D" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700">Payslip Contract</text>
+    <text x="1030" y="495" fill="#4F6068" font-family="'Space Grotesk', Arial, sans-serif" font-size="16">0xbF160BC0A4C610E8134eAbd3cd1a1a9608d534aC</text>
+
+    <rect x="196" y="554" width="584" height="252" rx="28" fill="#FFFFFF"/>
+    <text x="232" y="602" fill="#17323B" font-family="'DM Serif Display', Georgia, serif" font-size="34">Add Employee</text>
+    <text x="232" y="636" fill="#6A6E73" font-family="'Space Grotesk', Arial, sans-serif" font-size="18">Encrypted salary handles and proofs keep onboarding aligned with production.</text>
+    <rect x="232" y="664" width="250" height="42" rx="12" fill="#F5F0E9"/>
+    <rect x="498" y="664" width="246" height="42" rx="12" fill="#F5F0E9"/>
+    <rect x="232" y="720" width="512" height="42" rx="12" fill="#F5F0E9"/>
+    <rect x="232" y="778" width="170" height="40" rx="20" fill="#183642"/>
+    <text x="267" y="803" fill="#F7F0E8" font-family="'Space Grotesk', Arial, sans-serif" font-size="17" font-weight="700">Register Employee</text>
+
+    <rect x="816" y="554" width="588" height="120" rx="28" fill="#FFFFFF"/>
+    <text x="852" y="602" fill="#17323B" font-family="'DM Serif Display', Georgia, serif" font-size="34">Run Payroll</text>
+    <text x="852" y="636" fill="#6A6E73" font-family="'Space Grotesk', Arial, sans-serif" font-size="18">Single-run and batch payroll share the same processing path.</text>
+    <rect x="1168" y="592" width="196" height="44" rx="22" fill="#F2C57C"/>
+    <text x="1214" y="620" fill="#17323B" font-family="'Space Grotesk', Arial, sans-serif" font-size="18" font-weight="700">Run Payroll</text>
+
+    <rect x="816" y="694" width="588" height="112" rx="28" fill="#FFFFFF"/>
+    <text x="852" y="734" fill="#17323B" font-family="'DM Serif Display', Georgia, serif" font-size="30">Gateway Progress</text>
+    <rect x="852" y="754" width="102" height="14" rx="7" fill="#E6EFE9"/>
+    <rect x="966" y="754" width="122" height="14" rx="7" fill="#F2C57C"/>
+    <rect x="1100" y="754" width="134" height="14" rx="7" fill="#B7D4CC"/>
+    <rect x="1246" y="754" width="116" height="14" rx="7" fill="#DCE7EA"/>
+    <text x="852" y="792" fill="#6A6E73" font-family="'Space Grotesk', Arial, sans-serif" font-size="17">Tx submitted  •  Waiting for callback  •  Proof delivered</text>
+  </g>
+</svg>
