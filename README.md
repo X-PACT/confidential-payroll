@@ -1,5 +1,7 @@
 # Confidential Payroll
 
+Watch the 72-second demo: [confidential-payroll-demo.mp4](./docs/assets/confidential-payroll-demo.mp4)
+
 Confidential Payroll is a Zama fhEVM submission built around a real workplace problem. Salaries, bonuses, deductions, and payroll outputs stay encrypted on-chain, while the rest of the system still behaves like software an operations team could actually use: admins manage roles, treasury teams fund salary liquidity, employees request payslips, and regulators can verify compliance claims without prying into individual compensation.
 
 ## Frontend At A Glance
