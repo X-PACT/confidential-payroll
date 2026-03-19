@@ -6,6 +6,7 @@
 - Track: Zama confidential-payroll challenge
 - Network: Ethereum Sepolia (`11155111`)
 - Repository: `https://github.com/X-PACT/confidential-payroll`
+- Hosted frontend: `https://confidential-payroll-henna.vercel.app/frontend`
 
 ## Deployed Sepolia Contracts
 
@@ -103,6 +104,13 @@ It defaults to the published Sepolia contract addresses so judges can use the li
 4. Inspect the add-employee form to see the encrypted-input model.
 5. Trigger payroll or a payslip/equity request from an authorized account.
 6. Observe the gateway-progress handling in the UI and the contract events in Sepolia.
+
+## Included Review Assets
+
+- `docs/JUDGE_PATH.md` for the shortest high-signal review flow
+- `docs/COVER_NOTE.md` for a concise judge-facing project summary
+- `docs/DEMO_VIDEO.md` for a 60-90 second walkthrough script
+- `docs/assets/frontend-console-preview.svg` for a clean frontend preview used in the README
 
 ## Notable Engineering Choices
 
