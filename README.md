@@ -41,6 +41,16 @@ This final pass focused on making the repo read like a serious submission and no
 - Role updates emit a dedicated `RoleUpdated` event in addition to OpenZeppelin’s native role events.
 - The frontend is consolidated into one polished console in `frontend/index.html`. The duplicate HTML demo is gone.
 
+## Why This Submission Stands Out
+
+This project is strongest as a coherent system, not as a single cryptography trick.
+
+- It keeps salary data encrypted throughout the payroll lifecycle instead of treating privacy as a storage-only feature.
+- It uses branchless tax logic that stays compatible with the fhEVM v0.6 operations actually available in the codebase.
+- It connects payroll execution, salary-token settlement, payslip proofs, and equity checks into one reviewable flow.
+- It keeps the frontend honest: encrypted handles, proofs, and gateway callbacks are surfaced directly instead of hidden behind fake automation.
+- It aligns the repository, the hosted frontend, the scripts, and the Sepolia deployment references so judges can verify one consistent system.
+
 ## Why The Tax Logic Looks Different
 
 The repo keeps its tax path branchless for a simple reason: decrypting inside the tax loop would leak salary information and would not work on the real gateway-backed flow. fhEVM v0.6 also removed the generic encrypted `mul` and `div` route this project originally relied on.
